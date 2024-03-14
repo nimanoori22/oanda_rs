@@ -1,21 +1,23 @@
 use std::{error::Error, fmt};
+use serde::Deserialize;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct OandaError {
-    message: String,
+    #[serde(rename = "errorMessage")]
+    error_message: String,
 }
 
 impl OandaError {
     pub fn new(message: &str) -> OandaError {
         OandaError {
-            message: message.to_string(),
+            error_message: message.to_string(),
         }
     }
 }
 
 impl fmt::Display for OandaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "OandaError: {}", self.message)
+        write!(f, "OandaError: {}", self.error_message)
     }
 }
 
@@ -34,7 +36,7 @@ impl From<reqwest::Error> for OandaError {
 pub enum Errors {
     OandaError(OandaError),
     SerdeError(serde_json::Error),
-    // Add other error types here as needed
+    CustomError(String),
 }
 
 impl fmt::Display for Errors {
@@ -42,6 +44,7 @@ impl fmt::Display for Errors {
         match self {
             Errors::OandaError(e) => write!(f, "Oanda error: {}", e),
             Errors::SerdeError(e) => write!(f, "Serde error: {}", e),
+            Errors::CustomError(e) => write!(f, "Custom error: {}", e),
         }
     }
 }

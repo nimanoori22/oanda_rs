@@ -6,6 +6,7 @@ pub struct OandaClient {
     client: Client,
     account_id: Option<String>,
     api_key: String,
+    base_url: String,
 }
 
 
@@ -15,6 +16,7 @@ impl OandaClient {
             client: Client::new(),
             account_id: account_id.map(|s| s.to_string()),
             api_key: api_key.to_string(),
+            base_url: "https://api-fxpractice.oanda.com".to_string(),
         }
     }
 
@@ -27,7 +29,7 @@ impl OandaClient {
     }
 
     pub async fn make_request(&self, url: &str) -> Result<serde_json::Value, OandaError> {
-        let response = self.client.get(url)
+        let response = self.client.get(&format!("{}{}", self.base_url, url))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await?
