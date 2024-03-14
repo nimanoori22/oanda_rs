@@ -151,9 +151,8 @@ pub async fn get_candles(
     for (key, value) in query {
         url.push_str(&format!("{}={}&", key, value));
     }
-    println!("URL: {}", url);
+    
     let response = client.make_request(&url).await?;
-    // println!("Response: {:?}", response);
     let candles_response: Result<CandlesResponse, _> = serde_json::from_value(response.clone());
 
     if let Ok(candles) = candles_response {
