@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::client::OandaClient;
 use crate::errors::{Errors, OandaError};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 
 #[derive(Debug)]
@@ -59,7 +59,7 @@ impl ToString for Granularity {
 }
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct CandlesResponse {
     candles: Vec<Candle>,
@@ -67,7 +67,7 @@ pub struct CandlesResponse {
     instrument: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Candle {
     complete: bool,
@@ -76,7 +76,7 @@ pub struct Candle {
     volume: i32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Mid {
     c: String,

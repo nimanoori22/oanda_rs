@@ -1,10 +1,10 @@
 use crate::client::OandaClient;
 use crate::errors::{Errors, OandaError};
 
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct FinaningDay {
@@ -13,7 +13,7 @@ pub struct FinaningDay {
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct Financing {
@@ -23,7 +23,7 @@ pub struct Financing {
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct Tag {
     name : String,
@@ -32,7 +32,7 @@ pub struct Tag {
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct Instrument {
@@ -55,7 +55,7 @@ pub struct Instrument {
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct InstrumentsResponse {

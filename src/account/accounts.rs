@@ -1,16 +1,16 @@
 use crate::client::OandaClient;
 use crate::errors::Errors;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct AccountSummary {
     id: String,
     tags: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct AccountsResponse {
     accounts: Vec<AccountSummary>,

@@ -1,9 +1,9 @@
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use crate::client::OandaClient;
 use crate::errors::{Errors, OandaError};
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct AccountSummaryResponse {
@@ -11,7 +11,7 @@ pub struct AccountSummaryResponse {
     lastTransactionID: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 pub struct AccountSummaryDetail {
