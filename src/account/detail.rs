@@ -59,8 +59,13 @@ pub struct AccountResponse {
 pub async fn get_account(client: &OandaClient) -> Result<AccountResponse, Errors> {
     if let Some(account_id) = client.get_account_id() {
         let url = format!("/v3/accounts/{}", account_id);
-        let response = client.make_request(&url).await?;
-        let account: AccountResponse = serde_json::from_value(response)?;
+        // let response = client.make_request(&url).await?;
+        // let account: AccountResponse = serde_json::from_value(response)?;
+        // Ok(account)
+        let response = client.check_response(
+            client.make_request(&url).await
+        ).await?;
+        let account: AccountResponse = serde_json::from_value(response).map_err(Errors::from)?;
         Ok(account)
     } else {
         Err(Errors::OandaError(OandaError::new("Account ID not set")))

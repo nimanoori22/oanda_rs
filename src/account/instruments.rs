@@ -72,7 +72,10 @@ pub async fn get_account_instruments(client: &OandaClient) -> Result<Instruments
             "/v3/accounts/{}/instruments",
             account_id
         );
-        let response = client.make_request(&url).await?;
+        let response = client.check_response(
+            client.make_request(&url).await
+        ).await?;
+
         let instruments: InstrumentsResponse = serde_json::from_value(response)?;
         Ok(instruments)
     } else {
@@ -98,6 +101,27 @@ mod tests {
             Ok(response) => {
                 println!("Response: {:?}", response);
                 assert!(response.instruments.len() > 0);
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+                assert!(false);
+            }
+        }
+    }
+
+
+    #[tokio::test]
+    async fn test_serialize_instruments_response() {
+        dotenv::dotenv().ok();
+        let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
+        let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
+        let client = OandaClient::new(Some(&account_id), &api_key);
+
+        match get_account_instruments(&client).await {
+            Ok(response) => {
+                let serialized = serde_json::to_string(&response).unwrap();
+                println!("Serialized: {}", serialized);
+                assert!(true);
             }
             Err(e) => {
                 println!("Error: {:?}", e);

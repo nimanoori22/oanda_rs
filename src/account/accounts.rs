@@ -20,8 +20,12 @@ pub struct AccountsResponse {
 /// Get a list of all Accounts authorized for the provided token.
 pub async fn get_accounts(client: &OandaClient) -> Result<AccountsResponse, Errors> {
     let url = "/v3/accounts".to_string();
-    let response = client.make_request(&url).await?;
-    let accounts: AccountsResponse = serde_json::from_value(response)?;
+
+    let response = client.check_response(
+        client.make_request(&url).await
+    ).await?;
+
+    let accounts: AccountsResponse = serde_json::from_value(response).map_err(Errors::from)?;
     Ok(accounts)
 }
 

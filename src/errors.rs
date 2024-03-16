@@ -25,15 +25,9 @@ impl fmt::Display for OandaError {
 impl Error for OandaError {}
 
 
-impl From<reqwest::Error> for OandaError {
-    fn from(error: reqwest::Error) -> Self {
-        OandaError::new(&format!("Request failed: {}", error))
-    }
-}
-
-
 #[derive(Debug)]
 pub enum Errors {
+    ReqwestError(reqwest::Error),
     OandaError(OandaError),
     SerdeError(serde_json::Error),
     CustomError(String),
@@ -42,6 +36,7 @@ pub enum Errors {
 impl fmt::Display for Errors {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Errors::ReqwestError(e) => write!(f, "Reqwest error: {}", e),
             Errors::OandaError(e) => write!(f, "Oanda error: {}", e),
             Errors::SerdeError(e) => write!(f, "Serde error: {}", e),
             Errors::CustomError(e) => write!(f, "Custom error: {}", e),
@@ -58,6 +53,12 @@ impl From<OandaError> for Errors {
 impl From<serde_json::Error> for Errors {
     fn from(error: serde_json::Error) -> Self {
         Errors::SerdeError(error)
+    }
+}
+
+impl From<reqwest::Error> for Errors {
+    fn from(error: reqwest::Error) -> Self {
+        Errors::ReqwestError(error)
     }
 }
 

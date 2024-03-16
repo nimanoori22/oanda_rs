@@ -59,8 +59,10 @@ pub async fn get_account_summary(client: &OandaClient) -> Result<AccountSummaryR
             "/v3/accounts/{}/summary",
             account_id
         );
-        let response = client.make_request(&url).await?;
-        let account: AccountSummaryResponse = serde_json::from_value(response)?;
+        let response = client.check_response(
+            client.make_request(&url).await
+        ).await?;
+        let account: AccountSummaryResponse = serde_json::from_value(response).map_err(Errors::from)?;
         Ok(account)
     } else {
         Err(Errors::OandaError(OandaError::new("Account ID not set")))

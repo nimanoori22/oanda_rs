@@ -1,6 +1,6 @@
 use reqwest::Client;
-use crate::errors::OandaError;
-
+use crate::errors::{OandaError, Errors};
+use serde_json::Value;
 
 pub struct OandaClient {
     client: Client,
@@ -28,7 +28,7 @@ impl OandaClient {
         self.account_id.as_ref()
     }
 
-    pub async fn make_request(&self, url: &str) -> Result<serde_json::Value, OandaError> {
+    pub async fn make_request(&self, url: &str) -> Result<serde_json::Value, Errors> {
         let response = self.client.get(&format!("{}{}", self.base_url, url))
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
@@ -38,13 +38,29 @@ impl OandaClient {
         Ok(response)
     }
 
-    pub async fn patch(&self, url: &str, body: &serde_json::Value) -> Result<reqwest::Response, OandaError> {
+    pub async fn patch(&self, url: &str, body: &serde_json::Value) -> Result<reqwest::Response, Errors> {
         let response = self.client.patch(url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .json(body)
             .send()
             .await?;
         Ok(response)
+    }
+
+    pub async fn check_response(&self, response: Result<Value, Errors>) -> Result<Value, Errors> {
+        match response {
+            Ok(value) => {
+                if value.get("errorMessage").is_some() {
+                    Err(Errors::OandaError(OandaError::new(value["errorMessage"].as_str().unwrap())))
+                } else {
+                    Ok(value)
+                }
+            },
+            Err(Errors::ReqwestError(_)) => Err(Errors::OandaError(OandaError::new("Request failed"))),
+            Err(Errors::OandaError(err)) => Err(Errors::OandaError(err)),
+            Err(Errors::SerdeError(_)) => Err(Errors::OandaError(OandaError::new("Serialization failed"))),
+            Err(Errors::CustomError(_)) => Err(Errors::OandaError(OandaError::new("Custom error"))),
+        }
     }
 }
 

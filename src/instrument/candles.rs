@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::client::OandaClient;
-use crate::errors::{Errors, OandaError};
+use crate::errors::Errors;
 use serde::{Serialize, Deserialize};
 
 
@@ -152,18 +152,13 @@ pub async fn get_candles(
         url.push_str(&format!("{}={}&", key, value));
     }
     
-    let response = client.make_request(&url).await?;
-    let candles_response: Result<CandlesResponse, _> = serde_json::from_value(response.clone());
+    let response = client.check_response(
+        client.make_request(&url).await
+    ).await?;
 
-    if let Ok(candles) = candles_response {
-        Ok(candles)
-    } else {
-        let api_error: Result<OandaError, _> = serde_json::from_value(response.clone());
-        match api_error {
-            Ok(e) => Err(Errors::OandaError(e)),
-            Err(_) => Err(Errors::CustomError(String::from("Failed to deserialize response"))),
-        }
-    }
+    let candles: CandlesResponse = serde_json::from_value(response)?;
+
+    Ok(candles)
 }
 
 
