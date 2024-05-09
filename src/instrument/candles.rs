@@ -62,27 +62,27 @@ impl ToString for Granularity {
 #[derive(Serialize, Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct CandlesResponse {
-    candles: Vec<Candle>,
-    granularity: String,
-    instrument: String,
+    pub candles: Vec<Candle>,
+    pub granularity: String,
+    pub instrument: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Candle {
-    complete: bool,
-    mid: Mid,
-    time: String,
-    volume: i32,
+    pub complete: bool,
+    pub mid: Mid,
+    pub time: String,
+    pub volume: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Mid {
-    c: String,
-    h: String,
-    l: String,
-    o: String,
+    pub c: String,
+    pub h: String,
+    pub l: String,
+    pub o: String,
 }
 
 

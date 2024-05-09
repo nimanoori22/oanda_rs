@@ -8,8 +8,8 @@ use serde::{Serialize, Deserialize};
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct FinaningDay {
-    dayOfWeek: String,
-    daysCharged: u32,
+    pub dayOfWeek: String,
+    pub daysCharged: u32,
 }
 
 
@@ -17,18 +17,18 @@ pub struct FinaningDay {
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct Financing {
-    financingDaysOfWeek: Vec<FinaningDay>,
-    longRate: String,
-    shortRate: String,
+    pub financingDaysOfWeek: Vec<FinaningDay>,
+    pub longRate: String,
+    pub shortRate: String,
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct Tag {
-    name : String,
+    pub name : String,
     #[serde(rename = "type")]
-    type_type : String,
+    pub type_type : String,
 }
 
 
@@ -36,22 +36,22 @@ pub struct Tag {
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct Instrument {
-    displayName: String,
-    displayPrecision: u32,
-    financing: Financing,
-    guaranteedStopLossOrderMode: String,
-    marginRate: String,
-    maximumOrderUnits: String,
-    maximumPositionSize: String,
-    maximumTrailingStopDistance: String,
-    minimumTradeSize: String,
-    minimumTrailingStopDistance: String,
-    name: String,
-    pipLocation: i32,
-    tags: Vec<Tag>,
-    tradeUnitsPrecision: u32,
+    pub displayName: String,
+    pub displayPrecision: u32,
+    pub financing: Financing,
+    pub guaranteedStopLossOrderMode: String,
+    pub marginRate: String,
+    pub maximumOrderUnits: String,
+    pub maximumPositionSize: String,
+    pub maximumTrailingStopDistance: String,
+    pub minimumTradeSize: String,
+    pub minimumTrailingStopDistance: String,
+    pub name: String,
+    pub pipLocation: i32,
+    pub tags: Vec<Tag>,
+    pub tradeUnitsPrecision: u32,
     #[serde(rename = "type")]
-    instrument_type: String,
+    pub instrument_type: String,
 }
 
 
@@ -59,8 +59,8 @@ pub struct Instrument {
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub struct InstrumentsResponse {
-    instruments: Vec<Instrument>,
-    lastTransactionID: String,
+    pub instruments: Vec<Instrument>,
+    pub lastTransactionID: String,
 }
 
 /// Get a list of tradeable instruments for the given Account.

@@ -7,51 +7,51 @@ use crate::errors::{Errors, OandaError};
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ChangesResponse {
-    changes: Changes,
-    lastTransactionID: String,
-    state: State,
+    pub changes: Changes,
+    pub lastTransactionID: String,
+    pub state: State,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Changes {
-    ordersCancelled: Vec<Order>,
-    ordersCreated: Vec<Order>,
-    ordersFilled: Vec<Order>,
-    ordersTriggered: Vec<Order>,
-    positions: Vec<Position>,
-    tradesClosed: Vec<Trade>,
-    tradesOpened: Vec<Trade>,
-    tradesReduced: Vec<Trade>,
-    trasactions: Vec<Transaction>,
+    pub ordersCancelled: Vec<Order>,
+    pub ordersCreated: Vec<Order>,
+    pub ordersFilled: Vec<Order>,
+    pub ordersTriggered: Vec<Order>,
+    pub positions: Vec<Position>,
+    pub tradesClosed: Vec<Trade>,
+    pub tradesOpened: Vec<Trade>,
+    pub tradesReduced: Vec<Trade>,
+    pub trasactions: Vec<Transaction>,
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Order {
-    createTime: String,
-    filledTime: String,
-    fillingTransactionID: String,
-    id: String,
-    instrument: String,
-    positionFill: String,
-    state: String,
-    timeInForce: String,
-    tradeOpenedID: String,
-    type_: String,
-    units: String,
+    pub createTime: String,
+    pub filledTime: String,
+    pub fillingTransactionID: String,
+    pub id: String,
+    pub instrument: String,
+    pub positionFill: String,
+    pub state: String,
+    pub timeInForce: String,
+    pub tradeOpenedID: String,
+    pub type_: String,
+    pub units: String,
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Position {
-    instrument: String,
-    long: PositionDetails,
-    pl: String,
-    resettablePL: String,
-    short: PositionDetails,
+    pub instrument: String,
+    pub long: PositionDetails,
+    pub pl: String,
+    pub resettablePL: String,
+    pub short: PositionDetails,
 }
 
 
@@ -59,27 +59,27 @@ pub struct Position {
 #[allow(non_snake_case)]
 pub struct PositionDetails {
     #[serde(default)]
-    averagePrice: String,
-    pl: String,
-    resettablePL: String,
+    pub averagePrice: String,
+    pub pl: String,
+    pub resettablePL: String,
     #[serde(default)]
-    tradeIDs: Vec<String>,
-    units: String,
+    pub tradeIDs: Vec<String>,
+    pub units: String,
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Trade {
-    currentUnits: String,
-    financing: String,
-    id: String,
-    initialUnits: String,
-    instrument: String,
-    openTime: String,
-    price: String,
-    realizedPL: String,
-    state: String,
+    pub currentUnits: String,
+    pub financing: String,
+    pub id: String,
+    pub initialUnits: String,
+    pub instrument: String,
+    pub openTime: String,
+    pub price: String,
+    pub realizedPL: String,
+    pub state: String,
 }
 
 
@@ -93,79 +93,79 @@ pub enum Transaction {
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct MarketOrderTransaction {
-    accountID: String,
-    batchID: String,
-    id: String,
-    instrument: String,
-    positionFill: String,
-    reason: String,
-    time: String,
-    timeInForce: String,
-    r#type: String,
-    units: String,
-    userID: u32,
+    pub accountID: String,
+    pub batchID: String,
+    pub id: String,
+    pub instrument: String,
+    pub positionFill: String,
+    pub reason: String,
+    pub time: String,
+    pub timeInForce: String,
+    pub r#type: String,
+    pub units: String,
+    pub userID: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct OrderFillTransaction {
-    accountBalance: String,
-    accountID: String,
-    batchID: String,
-    financing: String,
-    id: String,
-    instrument: String,
-    orderID: String,
-    pl: String,
-    price: String,
-    reason: String,
-    time: String,
-    tradeOpened: TradeOpened,
-    r#type: String,
-    units: String,
-    userID: u32,
+    pub accountBalance: String,
+    pub accountID: String,
+    pub batchID: String,
+    pub financing: String,
+    pub id: String,
+    pub instrument: String,
+    pub orderID: String,
+    pub pl: String,
+    pub price: String,
+    pub reason: String,
+    pub time: String,
+    pub tradeOpened: TradeOpened,
+    pub r#type: String,
+    pub units: String,
+    pub userID: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct TradeOpened {
-    tradeID: String,
-    units: String,
+    pub tradeID: String,
+    pub units: String,
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct State {
-    NAV: String,
-    marginAvailable: String,
-    marginCloseoutMarginUsed: String,
-    marginCloseoutNAV: String,
-    marginCloseoutPercent: String,
-    marginCloseoutUnrealizedPL: String,
-    marginUsed: String,
-    orders: Vec<String>,
-    positionValue: String,
-    positions: Vec<StatePosition>,
-    trades: Vec<StateTrade>,
-    unrealizedPL: String,
-    withdrawalLimit: String,
+    pub NAV: String,
+    pub marginAvailable: String,
+    pub marginCloseoutMarginUsed: String,
+    pub marginCloseoutNAV: String,
+    pub marginCloseoutPercent: String,
+    pub marginCloseoutUnrealizedPL: String,
+    pub marginUsed: String,
+    pub orders: Vec<String>,
+    pub positionValue: String,
+    pub positions: Vec<StatePosition>,
+    pub trades: Vec<StateTrade>,
+    pub unrealizedPL: String,
+    pub withdrawalLimit: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StatePosition {
-    instrument: String,
-    longUnrealizedPL: String,
-    netUnrealizedPL: String,
-    shortUnrealizedPL: String,
+    pub instrument: String,
+    pub longUnrealizedPL: String,
+    pub netUnrealizedPL: String,
+    pub shortUnrealizedPL: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StateTrade {
-    id: String,
-    unrealizedPL: String,
+    pub id: String,
+    pub unrealizedPL: String,
 }
 
 /// Endpoint used to poll an Account for its current state and changes since a specified TransactionID

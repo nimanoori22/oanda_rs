@@ -6,14 +6,14 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct AccountSummary {
-    id: String,
-    tags: Vec<String>,
+    pub id: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct AccountsResponse {
-    accounts: Vec<AccountSummary>,
+    pub accounts: Vec<AccountSummary>,
 }
 
 

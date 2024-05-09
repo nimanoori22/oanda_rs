@@ -9,22 +9,22 @@ use crate::errors::{Errors, OandaError};
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ClientConfigureTransaction {
-    accountID: String,
-    batchID: String,
-    id: String,
-    marginRate: Option<String>,
-    alias: Option<String>,
-    time: String,
+    pub accountID: String,
+    pub batchID: String,
+    pub id: String,
+    pub marginRate: Option<String>,
+    pub alias: Option<String>,
+    pub time: String,
     #[serde(rename = "type")]
-    type_: String,
-    userID: u64,
+    pub type_: String,
+    pub userID: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct ConfigurationResponse {
-    clientConfigureTransaction: ClientConfigureTransaction,
-    lastTransactionID: String,
+    pub clientConfigureTransaction: ClientConfigureTransaction,
+    pub lastTransactionID: String,
 }
 
 
