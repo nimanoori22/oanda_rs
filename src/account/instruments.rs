@@ -66,22 +66,37 @@ pub struct InstrumentsResponse {
 /// Get a list of tradeable instruments for the given Account.
 /// The list of tradeable instruments is dependent on the regulatory division that the Account is located in,
 /// thus should be the same for all Accounts owned by a single user.
-pub async fn get_account_instruments(client: &OandaClient) -> Result<InstrumentsResponse, Errors> {
-    if let Some(account_id) = client.get_account_id() {
-        let url = format!(
-            "/v3/accounts/{}/instruments",
-            account_id
-        );
-        let response = client.check_response(
-            client.make_request(&url).await
-        ).await?;
+impl OandaClient {
+    pub async fn get_account_instruments(&self) -> Result<InstrumentsResponse, Errors> {
+        if let Some(account_id) = self.get_account_id() {
+            let url = format!("/v3/accounts/{}/instruments", account_id);
+            let response = self.check_response(
+                self.make_request(&url).await
+            ).await?;
 
-        let instruments: InstrumentsResponse = serde_json::from_value(response)?;
-        Ok(instruments)
-    } else {
-        Err(Errors::OandaError(OandaError::new("Account ID not set")))
+            let instruments: InstrumentsResponse = serde_json::from_value(response)?;
+            Ok(instruments)
+        } else {
+            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+        }
     }
 }
+// pub async fn get_account_instruments(client: &OandaClient) -> Result<InstrumentsResponse, Errors> {
+//     if let Some(account_id) = client.get_account_id() {
+//         let url = format!(
+//             "/v3/accounts/{}/instruments",
+//             account_id
+//         );
+//         let response = client.check_response(
+//             client.make_request(&url).await
+//         ).await?;
+
+//         let instruments: InstrumentsResponse = serde_json::from_value(response)?;
+//         Ok(instruments)
+//     } else {
+//         Err(Errors::OandaError(OandaError::new("Account ID not set")))
+//     }
+// }
 
 
 mod tests {
@@ -95,9 +110,9 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key);
+        let client = OandaClient::new(Some(&account_id), &api_key).unwrap();
 
-        match get_account_instruments(&client).await {
+        match client.get_account_instruments().await {
             Ok(response) => {
                 println!("Response: {:?}", response);
                 assert!(response.instruments.len() > 0);
@@ -115,9 +130,9 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key);
+        let client = OandaClient::new(Some(&account_id), &api_key).unwrap();
 
-        match get_account_instruments(&client).await {
+        match client.get_account_instruments().await {
             Ok(response) => {
                 let serialized = serde_json::to_string(&response).unwrap();
                 println!("Serialized: {}", serialized);

@@ -1,24 +1,40 @@
-use reqwest::Client;
 use crate::errors::{OandaError, Errors};
+
 use serde_json::Value;
 
-pub struct OandaClient {
+use reqwest::Client;
+use tower::{limit::rate::RateLimit, ServiceBuilder};
+
+use std::time::Duration;
+
+
+pub struct OandaClient
+{
     client: Client,
     account_id: Option<String>,
     api_key: String,
     base_url: String,
+    #[allow(dead_code)]
+    service: RateLimit<reqwest::Client>,
 }
 
 
-impl OandaClient {
-    pub fn new(account_id: Option<&str>, api_key: &str) -> OandaClient {
-        OandaClient {
-            client: Client::new(),
+impl OandaClient
+{
+    pub fn new(account_id: Option<&str>, api_key: &str) -> Result<OandaClient, Errors> {
+        let client = Client::new();
+        let service: RateLimit<Client> = ServiceBuilder::new()
+            .rate_limit(100, Duration::from_secs(1))
+            .service(client.clone());
+        Ok(OandaClient {
+            client,
             account_id: account_id.map(|s| s.to_string()),
             api_key: api_key.to_string(),
             base_url: "https://api-fxpractice.oanda.com".to_string(),
-        }
+            service,
+        })
     }
+
 
     pub fn set_account_id(&mut self, account_id: &str) {
         self.account_id = Some(account_id.to_string());

@@ -170,20 +170,22 @@ pub struct StateTrade {
 
 /// Endpoint used to poll an Account for its current state and changes since a specified TransactionID
 /// TODO: test this function with a valid transaction_id
-pub async fn get_changes(client: &OandaClient, transaction_id: &String) -> Result<ChangesResponse, Errors> {
-    if let Some(account_id) = client.get_account_id() {
-        let url = format!(
-            "/v3/accounts/{}/changes?sinceTransactionID={}",
-            account_id,
-            transaction_id
-        );
-        let response = client.check_response(
-            client.make_request(&url).await
-        ).await?;
-        let changes : ChangesResponse = serde_json::from_value(response).map_err(Errors::from)?;
-        Ok(changes)
-    } else {
-        Err(Errors::OandaError(OandaError::new("Account ID not set")))
+impl OandaClient {
+    pub async fn get_changes(&self, transaction_id: &String) -> Result<ChangesResponse, Errors> {
+        if let Some(account_id) = self.get_account_id() {
+            let url = format!(
+                "/v3/accounts/{}/changes?sinceTransactionID={}",
+                account_id,
+                transaction_id
+            );
+            let response = self.check_response(
+                self.make_request(&url).await
+            ).await?;
+            let changes : ChangesResponse = serde_json::from_value(response).map_err(Errors::from)?;
+            Ok(changes)
+        } else {
+            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+        }
     }
 }
 
@@ -198,10 +200,10 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key);
+        let client = OandaClient::new(Some(&account_id), &api_key).unwrap();
         let transaction_id = "6357".to_string();
 
-        match get_changes(&client, &transaction_id).await {
+        match client.get_changes(&transaction_id).await {
             Ok(response) => {
                 println!("Response: {:?}", response);
                 assert_eq!(response.lastTransactionID, transaction_id);

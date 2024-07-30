@@ -18,16 +18,28 @@ pub struct AccountsResponse {
 
 
 /// Get a list of all Accounts authorized for the provided token.
-pub async fn get_accounts(client: &OandaClient) -> Result<AccountsResponse, Errors> {
-    let url = "/v3/accounts".to_string();
+impl OandaClient {
+    pub async fn get_accounts(&self) -> Result<AccountsResponse, Errors> {
+        let url = "/v3/accounts".to_string();
 
-    let response = client.check_response(
-        client.make_request(&url).await
-    ).await?;
+        let response = self.check_response(
+            self.make_request(&url).await
+        ).await?;
 
-    let accounts: AccountsResponse = serde_json::from_value(response).map_err(Errors::from)?;
-    Ok(accounts)
+        let accounts: AccountsResponse = serde_json::from_value(response).map_err(Errors::from)?;
+        Ok(accounts)
+    }
 }
+// pub async fn get_accounts(client: &OandaClient) -> Result<AccountsResponse, Errors> {
+//     let url = "/v3/accounts".to_string();
+
+//     let response = client.check_response(
+//         client.make_request(&url).await
+//     ).await?;
+
+//     let accounts: AccountsResponse = serde_json::from_value(response).map_err(Errors::from)?;
+//     Ok(accounts)
+// }
 
 
 
@@ -43,9 +55,9 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY")
             .expect("OANDA_API_KEY must be set");
-        let client = OandaClient::new(None, &api_key);
+        let client = OandaClient::new(None, &api_key).unwrap();
         
-        match get_accounts(&client).await {
+        match client.get_accounts().await {
             Ok(response) => {
                 println!("Response: {:?}", response);
                 assert!(response.accounts.len() > 0);

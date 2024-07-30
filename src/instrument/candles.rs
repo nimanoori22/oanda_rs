@@ -141,28 +141,55 @@ impl CandleQueryBuilder {
 }
 
 
-pub async fn get_candles(
-    client: &OandaClient,
-    instrument: &str,
-    query: HashMap<String, String>,
-) -> Result<CandlesResponse, Errors> {
-    let mut url = format!("/v3/instruments/{}/candles?",instrument);
+impl OandaClient
+{
+    pub async fn get_candles(
+        &self,
+        instrument: &str,
+        query: HashMap<String, String>,
+    ) -> Result<CandlesResponse, Errors> {
+        let mut url = format!("/v3/instruments/{}/candles?", instrument);
 
-    for (key, value) in query {
-        url.push_str(&format!("{}={}&", key, value));
+        for (key, value) in query {
+            url.push_str(&format!("{}={}&", key, value));
+        }
+
+        let response = self.check_response(
+            self.make_request(&url).await
+        ).await?;
+
+        let candles: CandlesResponse = serde_json::from_value(response)?;
+
+        Ok(candles)
     }
-    
-    let response = client.check_response(
-        client.make_request(&url).await
-    ).await?;
-
-    let candles: CandlesResponse = serde_json::from_value(response)?;
-
-    Ok(candles)
 }
+
+// pub async fn get_candles<S>(
+//     client: &OandaClient<S>,
+//     instrument: &str,
+//     query: HashMap<String, String>,
+// ) -> Result<CandlesResponse, Errors> 
+// where
+//     S: Service<Request, Response = Response, Error = Error>,
+// {
+//     let mut url = format!("/v3/instruments/{}/candles?",instrument);
+
+//     for (key, value) in query {
+//         url.push_str(&format!("{}={}&", key, value));
+//     }
+    
+//     let response = client.check_response(
+//         client.make_request(&url).await
+//     ).await?;
+
+//     let candles: CandlesResponse = serde_json::from_value(response)?;
+
+//     Ok(candles)
+// }
 
 
 mod tests {
+
     #[allow(unused_imports)]
     use super::*;
 
@@ -173,13 +200,22 @@ mod tests {
             .expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key);
+        let client_result = OandaClient::new(Some(&account_id), &api_key);
+
+        let client = match client_result {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error: {}", e);
+                assert!(false);
+                return;
+            }
+        };
 
         let mut query = CandleQueryBuilder::new();
         query.add("count", CandlesQueryBuilder::Count(5));
         query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::H1));
 
-        let response = get_candles(&client, "EUR_USD", query.build()).await;
+        let response = client.get_candles("EUR_USD", query.build()).await;
 
         match response {
             Ok(v) => {
@@ -201,14 +237,23 @@ mod tests {
             .expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key);
+
+        let client_result = OandaClient::new(Some(&account_id), &api_key);
+        let client = match client_result {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Error: {}", e);
+                assert!(false);
+                return;
+            }
+        };
 
         let mut query = CandleQueryBuilder::new();
         query.add("from", CandlesQueryBuilder::From("2021-01-04T00:00:00Z".to_string()));
         query.add("to", CandlesQueryBuilder::To("2021-01-05T00:00:00Z".to_string()));
         query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::H1));
 
-        let response = get_candles(&client, "EUR_USD", query.build()).await;
+        let response = client.get_candles("EUR_USD", query.build()).await;
 
         match response {
             Ok(v) => {
