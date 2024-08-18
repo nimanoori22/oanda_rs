@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use crate::client::OandaClient;
-use crate::errors::{Errors, OandaError};
+use crate::error::APIError;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,16 +54,16 @@ pub struct AccountSummaryDetail {
 
 impl OandaClient {
     /// Get a summary for a single Account that a client has access to.
-    pub async fn get_account_summary(&self) -> Result<AccountSummaryResponse, Errors> {
+    pub async fn get_account_summary(&self) -> Result<AccountSummaryResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}/summary", account_id);
             let response = self.check_response(
                 self.make_request(&url).await
             ).await?;
-            let account: AccountSummaryResponse = serde_json::from_value(response).map_err(Errors::from)?;
+            let account: AccountSummaryResponse = serde_json::from_value(response).map_err(APIError::from)?;
             Ok(account)
         } else {
-            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+            Err(APIError::Other("Account ID Not Set".to_string()))
         }
     }
     

@@ -1,5 +1,5 @@
 use crate::client::OandaClient;
-use crate::errors::{Errors, OandaError};
+use crate::error::APIError;
 
 use serde::{Serialize, Deserialize};
 
@@ -67,7 +67,7 @@ pub struct InstrumentsResponse {
 /// The list of tradeable instruments is dependent on the regulatory division that the Account is located in,
 /// thus should be the same for all Accounts owned by a single user.
 impl OandaClient {
-    pub async fn get_account_instruments(&self) -> Result<InstrumentsResponse, Errors> {
+    pub async fn get_account_instruments(&self) -> Result<InstrumentsResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}/instruments", account_id);
             let response = self.check_response(
@@ -77,26 +77,11 @@ impl OandaClient {
             let instruments: InstrumentsResponse = serde_json::from_value(response)?;
             Ok(instruments)
         } else {
-            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+            Err(APIError::Other("Account ID Not Set".to_string()))
         }
     }
 }
-// pub async fn get_account_instruments(client: &OandaClient) -> Result<InstrumentsResponse, Errors> {
-//     if let Some(account_id) = client.get_account_id() {
-//         let url = format!(
-//             "/v3/accounts/{}/instruments",
-//             account_id
-//         );
-//         let response = client.check_response(
-//             client.make_request(&url).await
-//         ).await?;
 
-//         let instruments: InstrumentsResponse = serde_json::from_value(response)?;
-//         Ok(instruments)
-//     } else {
-//         Err(Errors::OandaError(OandaError::new("Account ID not set")))
-//     }
-// }
 
 
 mod tests {

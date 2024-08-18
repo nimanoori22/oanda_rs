@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use crate::client::OandaClient;
-use crate::errors::{Errors, OandaError};
+use crate::error::APIError;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,34 +57,19 @@ pub struct AccountResponse {
 impl OandaClient {
     /// Get the full details for a single Account that a client has access to.
     /// Full pending Order, open Trade and open Position representations are provided.
-    pub async fn get_account(&self) -> Result<AccountResponse, Errors> {
+    pub async fn get_account(&self) -> Result<AccountResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}", account_id);
             let response = self.check_response(
                 self.make_request(&url).await
             ).await?;
-            let account: AccountResponse = serde_json::from_value(response).map_err(Errors::from)?;
+            let account: AccountResponse = serde_json::from_value(response).map_err(APIError::from)?;
             Ok(account)
         } else {
-            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+            Err(APIError::Other("Account ID Not Set".to_string()))
         }
     }
 }
-// pub async fn get_account(client: &OandaClient) -> Result<AccountResponse, Errors> {
-//     if let Some(account_id) = client.get_account_id() {
-//         let url = format!("/v3/accounts/{}", account_id);
-//         // let response = client.make_request(&url).await?;
-//         // let account: AccountResponse = serde_json::from_value(response)?;
-//         // Ok(account)
-//         let response = client.check_response(
-//             client.make_request(&url).await
-//         ).await?;
-//         let account: AccountResponse = serde_json::from_value(response).map_err(Errors::from)?;
-//         Ok(account)
-//     } else {
-//         Err(Errors::OandaError(OandaError::new("Account ID not set")))
-//     }
-// }
 
 
 mod tests {

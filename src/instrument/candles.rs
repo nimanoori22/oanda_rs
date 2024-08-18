@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::client::OandaClient;
-use crate::errors::Errors;
+use crate::error::APIError;
 use serde::{Serialize, Deserialize};
 
 
@@ -147,7 +147,7 @@ impl OandaClient
         &self,
         instrument: &str,
         query: HashMap<String, String>,
-    ) -> Result<CandlesResponse, Errors> {
+    ) -> Result<CandlesResponse, APIError> {
         let mut url = format!("/v3/instruments/{}/candles?", instrument);
 
         for (key, value) in query {
@@ -163,29 +163,6 @@ impl OandaClient
         Ok(candles)
     }
 }
-
-// pub async fn get_candles<S>(
-//     client: &OandaClient<S>,
-//     instrument: &str,
-//     query: HashMap<String, String>,
-// ) -> Result<CandlesResponse, Errors> 
-// where
-//     S: Service<Request, Response = Response, Error = Error>,
-// {
-//     let mut url = format!("/v3/instruments/{}/candles?",instrument);
-
-//     for (key, value) in query {
-//         url.push_str(&format!("{}={}&", key, value));
-//     }
-    
-//     let response = client.check_response(
-//         client.make_request(&url).await
-//     ).await?;
-
-//     let candles: CandlesResponse = serde_json::from_value(response)?;
-
-//     Ok(candles)
-// }
 
 
 mod tests {

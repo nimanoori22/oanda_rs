@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use reqwest::StatusCode;
+use serde_json::{json, Value};
 
 use crate::client::OandaClient;
-use crate::errors::{Errors, OandaError};
+use crate::error::APIError;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,7 +29,7 @@ pub struct ConfigurationResponse {
 
 impl OandaClient {
     /// Set the client-confguable portions of an Account.
-    pub async fn patch_configuration(&self, alias: Option<String>, margin_rate: Option<String>) -> Result<ConfigurationResponse, Errors> {
+    pub async fn patch_configuration(&self, alias: Option<String>, margin_rate: Option<String>) -> Result<ConfigurationResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}/configuration", account_id);
             let body = json!({
@@ -38,47 +37,20 @@ impl OandaClient {
                 "marginRate": margin_rate
             });
 
-            let response = self.patch(&url, &body).await?;
+            let response: Value = self.patch(&url, &body).await?;
 
-            match response.status() {
-                StatusCode::OK => {
-                    let response_body: ConfigurationResponse = serde_json::from_str(
-                        &response.text().await?
-                    ).map_err(Errors::from)?;
+            match response.get("status").and_then(|v| v.as_u64()) {
+                Some(200) => {
+                    let response_body: ConfigurationResponse = serde_json::from_value(response)
+                        .map_err(APIError::from)?;
                     Ok(response_body)
                 },
-                StatusCode::BAD_REQUEST => Err(Errors::OandaError(OandaError::new("The configuration specification was invalid"))),
-                StatusCode::FORBIDDEN => Err(Errors::OandaError(OandaError::new("The configuration operation was forbidden on the Account"))),
-                _ => Err(Errors::OandaError(OandaError::new("Unknown error"))),
+                Some(400) => Err(APIError::Other("The configuration specification was invalid".to_string())),
+                Some(403) => Err(APIError::Other("The configuration operation was forbidden on the Account".to_string())),
+                _ => Err(APIError::Other("Unknown error".to_string())),
             }
         } else {
-            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+            Err(APIError::Other("Account ID Not Set".to_string()))
         }
     }
 }
-
-// pub async fn patch_configuration(client: &OandaClient, alias: Option<String>, margin_rate: Option<String>) -> Result<ConfigurationResponse, Errors> {
-//     if let Some(account_id) = client.get_account_id() {
-//         let url = format!("/v3/accounts/{}/configuration", account_id);
-//         let body = json!({
-//             "alias": alias,
-//             "marginRate": margin_rate
-//         });
-
-//         let res = client.patch(&url, &body).await?;
-
-//         match res.status() {
-//             StatusCode::OK => {
-//                 let response_body: ConfigurationResponse = serde_json::from_str(
-//                     &res.text().await?
-//                 ).map_err(Errors::from)?;
-//                 Ok(response_body)
-//             },
-//             StatusCode::BAD_REQUEST => Err(Errors::OandaError(OandaError::new("The configuration specification was invalid"))),
-//             StatusCode::FORBIDDEN => Err(Errors::OandaError(OandaError::new("The configuration operation was forbidden on the Account"))),
-//             _ => Err(Errors::OandaError(OandaError::new("Unknown error"))),
-//         }
-//     } else {
-//         Err(Errors::OandaError(OandaError::new("Account ID not set")))
-//     }
-// }

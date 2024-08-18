@@ -1,5 +1,5 @@
 use crate::client::OandaClient;
-use crate::errors::Errors;
+use crate::error::APIError;
 use serde::{Serialize, Deserialize};
 
 
@@ -19,29 +19,17 @@ pub struct AccountsResponse {
 
 /// Get a list of all Accounts authorized for the provided token.
 impl OandaClient {
-    pub async fn get_accounts(&self) -> Result<AccountsResponse, Errors> {
+    pub async fn get_accounts(&self) -> Result<AccountsResponse, APIError> {
         let url = "/v3/accounts".to_string();
 
         let response = self.check_response(
             self.make_request(&url).await
         ).await?;
 
-        let accounts: AccountsResponse = serde_json::from_value(response).map_err(Errors::from)?;
+        let accounts: AccountsResponse = serde_json::from_value(response).map_err(APIError::from)?;
         Ok(accounts)
     }
 }
-// pub async fn get_accounts(client: &OandaClient) -> Result<AccountsResponse, Errors> {
-//     let url = "/v3/accounts".to_string();
-
-//     let response = client.check_response(
-//         client.make_request(&url).await
-//     ).await?;
-
-//     let accounts: AccountsResponse = serde_json::from_value(response).map_err(Errors::from)?;
-//     Ok(accounts)
-// }
-
-
 
 
 mod tests {

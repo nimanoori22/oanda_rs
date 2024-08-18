@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::client::OandaClient;
-use crate::errors::{Errors, OandaError};
+use crate::error::APIError;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -171,7 +171,7 @@ pub struct StateTrade {
 /// Endpoint used to poll an Account for its current state and changes since a specified TransactionID
 /// TODO: test this function with a valid transaction_id
 impl OandaClient {
-    pub async fn get_changes(&self, transaction_id: &String) -> Result<ChangesResponse, Errors> {
+    pub async fn get_changes(&self, transaction_id: &String) -> Result<ChangesResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!(
                 "/v3/accounts/{}/changes?sinceTransactionID={}",
@@ -181,10 +181,10 @@ impl OandaClient {
             let response = self.check_response(
                 self.make_request(&url).await
             ).await?;
-            let changes : ChangesResponse = serde_json::from_value(response).map_err(Errors::from)?;
+            let changes : ChangesResponse = serde_json::from_value(response).map_err(APIError::from)?;
             Ok(changes)
         } else {
-            Err(Errors::OandaError(OandaError::new("Account ID not set")))
+            Err(APIError::Other("Account ID Not Set".to_string()))
         }
     }
 }
