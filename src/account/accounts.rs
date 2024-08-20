@@ -23,7 +23,7 @@ impl OandaClient {
         let url = "/v3/accounts".to_string();
 
         let response = self.check_response(
-            self.make_request(&url).await
+            self.get(&url).await
         ).await?;
 
         let accounts: AccountsResponse = serde_json::from_value(response).map_err(APIError::from)?;

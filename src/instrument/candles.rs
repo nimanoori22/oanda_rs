@@ -154,12 +154,8 @@ impl OandaClient
             url.push_str(&format!("{}={}&", key, value));
         }
 
-        let response = self.check_response(
-            self.make_request(&url).await
-        ).await?;
-
+        let response = self.get(&url).await?;
         let candles: CandlesResponse = serde_json::from_value(response)?;
-
         Ok(candles)
     }
 }
@@ -231,7 +227,7 @@ mod tests {
         query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::H1));
 
         let response = client.get_candles("EUR_USD", query.build()).await;
-
+        println!("Response: {:?}", response);
         match response {
             Ok(v) => {
                 println!("Response: {:?}", v);

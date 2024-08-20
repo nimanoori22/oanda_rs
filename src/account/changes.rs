@@ -179,7 +179,7 @@ impl OandaClient {
                 transaction_id
             );
             let response = self.check_response(
-                self.make_request(&url).await
+                self.get(&url).await
             ).await?;
             let changes : ChangesResponse = serde_json::from_value(response).map_err(APIError::from)?;
             Ok(changes)

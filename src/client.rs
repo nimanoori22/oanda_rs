@@ -2,19 +2,19 @@ use crate::error::APIError;
 
 use serde_json::Value;
 
-use reqwest::{Client, RequestBuilder};
-use tower::{limit::rate::RateLimit, ServiceBuilder};
-use tower::Service;
+use reqwest::{Client, RequestBuilder, Request};
+use tower::buffer::Buffer;
+use tower::{limit::rate::RateLimit, ServiceBuilder, Service};
+use tokio::sync::{Mutex, MutexGuard};
 
-use std::time::Duration;
-use std::sync::{Arc, Mutex};
-use std::sync::MutexGuard;
+use std::{future::poll_fn, time::Duration, sync::Arc};
+
 
 
 #[derive(Clone, Debug)]
 pub struct OandaClient
 {
-    client: Arc<Mutex<RateLimit<Client>>>,
+    client: Arc<Mutex<Buffer<RateLimit<Client>, Request>>>,
     account_id: Option<String>,
     api_key: String,
     base_url: String,
@@ -25,9 +25,11 @@ impl OandaClient
 {
     pub fn new(account_id: Option<&str>, api_key: &str) -> Result<OandaClient, APIError> {
         let client = Client::new();
-        let service: RateLimit<Client> = ServiceBuilder::new()
+        let service:Buffer<RateLimit<Client>, Request>  = ServiceBuilder::new()
+            .buffer(100)
             .rate_limit(100, Duration::from_secs(1))
             .service(client);
+
         Ok(OandaClient {
             client: Arc::new(Mutex::new(service)),
             account_id: account_id.map(|s| s.to_string()),
@@ -47,25 +49,30 @@ impl OandaClient
 
 
     async fn send_request(&self, request: RequestBuilder) -> Result<Value, APIError> {
-        let mut client: MutexGuard<RateLimit<Client>> = self.client.lock().unwrap();
+        let mut client: MutexGuard<Buffer<RateLimit<Client>, Request>> = self.client.lock().await;
+
+        poll_fn(|cx| client.poll_ready(cx))
+            .await
+            .map_err(|e| APIError::Other(format!("Service not ready: {}", e)))?;
+
         let request = request
             .header("Authorization", format!("Bearer {}", self.api_key))
             .build()?;
+
         let response = client
             .call(request)
-            .await?
-            .json()
-            .await?;
+            .await
+            .map_err(|e| APIError::Other(e.to_string()))?;
+
+        let response = response.json::<Value>().await.map_err(APIError::from)?;
+
         self.check_response(Ok(response)).await
     }
 
 
-    pub async fn make_request(&self, url: &str) -> Result<Value, APIError> {
+    pub async fn get(&self, url: &str) -> Result<Value, APIError> {
         let full_url = format!("{}{}", self.base_url, url);
-        let request = self.client
-            .lock()
-            .unwrap()
-            .get_mut()
+        let request = Client::new()
             .get(&full_url);
         self.send_request(request).await
     }
@@ -73,10 +80,7 @@ impl OandaClient
 
     pub async fn patch(&self, url: &str, body: &Value) -> Result<Value, APIError> {
         let full_url = format!("{}{}", self.base_url, url);
-        let request = self.client
-            .lock()
-            .unwrap()
-            .get_mut()
+        let request = Client::new()
             .patch(&full_url)
             .json(body);
         self.send_request(request).await
