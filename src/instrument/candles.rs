@@ -173,7 +173,7 @@ mod tests {
             .expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
-        let client_result = OandaClient::new(Some(&account_id), &api_key);
+        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100);
 
         let client = match client_result {
             Ok(v) => v,
@@ -211,7 +211,7 @@ mod tests {
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
 
-        let client_result = OandaClient::new(Some(&account_id), &api_key);
+        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100);
         let client = match client_result {
             Ok(v) => v,
             Err(e) => {

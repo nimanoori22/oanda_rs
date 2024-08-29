@@ -23,11 +23,11 @@ pub struct OandaClient
 
 impl OandaClient
 {
-    pub fn new(account_id: Option<&str>, api_key: &str) -> Result<OandaClient, APIError> {
+    pub fn new(account_id: Option<&str>, api_key: &str, buffer: u64, rate_limit: u64) -> Result<OandaClient, APIError> {
         let client = Client::new();
         let service:Buffer<RateLimit<Client>, Request>  = ServiceBuilder::new()
-            .buffer(100)
-            .rate_limit(100, Duration::from_secs(1))
+            .buffer(buffer.try_into().unwrap())
+            .rate_limit(rate_limit, Duration::from_secs(1))
             .service(client);
 
         Ok(OandaClient {
@@ -120,7 +120,7 @@ mod tests {
             .expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
-        let client = super::OandaClient::new(Some(&account_id), &api_key).unwrap();
+        let client = super::OandaClient::new(Some(&account_id), &api_key, 100, 100).unwrap();
         let client_clone = client.clone();
         let client_id = client.get_account_id().unwrap();
         let client_clone_id = client_clone.get_account_id().unwrap();

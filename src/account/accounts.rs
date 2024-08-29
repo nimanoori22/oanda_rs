@@ -43,7 +43,7 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY")
             .expect("OANDA_API_KEY must be set");
-        let client = OandaClient::new(None, &api_key).unwrap();
+        let client = OandaClient::new(None, &api_key, 100, 100).unwrap();
         
         match client.get_accounts().await {
             Ok(response) => {
