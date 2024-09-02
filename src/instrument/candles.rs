@@ -144,7 +144,7 @@ impl CandleQueryBuilder {
 impl OandaClient
 {
     pub async fn get_candles(
-        &self,
+        &mut self,
         instrument: &str,
         query: HashMap<String, String>,
     ) -> Result<CandlesResponse, APIError> {
@@ -163,6 +163,10 @@ impl OandaClient
 
 mod tests {
 
+    use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
+
+    use futures::{stream, StreamExt};
+
     #[allow(unused_imports)]
     use super::*;
 
@@ -173,9 +177,15 @@ mod tests {
             .expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
-        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100);
+        let client_result = OandaClient::new(
+                    Some(&account_id), 
+                    &api_key, 
+                    100,
+                    100,
+                    100
+                );
 
-        let client = match client_result {
+        let mut client = match client_result {
             Ok(v) => v,
             Err(e) => {
                 println!("Error: {}", e);
@@ -211,8 +221,8 @@ mod tests {
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
 
-        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100);
-        let client = match client_result {
+        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100, 100);
+        let mut client = match client_result {
             Ok(v) => v,
             Err(e) => {
                 println!("Error: {}", e);
@@ -238,6 +248,138 @@ mod tests {
                 assert!(false);
             }
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_get_candles_async() -> Result<(), APIError> {
+        dotenv::dotenv().ok();
+        let api_key = std::env::var("OANDA_API_KEY")
+            .expect("OANDA_API_KEY must be set");
+        let account_id = std::env::var("OANDA_ACCOUNT_ID")
+            .expect("OANDA_ACCOUNT_ID must be set");
+
+
+        let dates = vec![
+                ["2023-12-30T12:00:00Z", "2024-01-02T23:20:00Z"], 
+                ["2024-01-02T23:20:00Z", "2024-01-06T10:40:00Z"], 
+                ["2024-01-06T10:40:00Z", "2024-01-09T22:00:00Z"], 
+                ["2024-01-09T22:00:00Z", "2024-01-13T09:20:00Z"], 
+                ["2024-01-13T09:20:00Z", "2024-01-16T20:40:00Z"], 
+                ["2024-01-16T20:40:00Z", "2024-01-20T08:00:00Z"], 
+                ["2024-01-20T08:00:00Z", "2024-01-23T19:20:00Z"], 
+                ["2024-01-23T19:20:00Z", "2024-01-27T06:40:00Z"], 
+                ["2024-01-27T06:40:00Z", "2024-01-30T18:00:00Z"], 
+                ["2024-01-30T18:00:00Z", "2024-02-03T05:20:00Z"], 
+                ["2024-02-03T05:20:00Z", "2024-02-06T16:40:00Z"], 
+                ["2024-02-06T16:40:00Z", "2024-02-10T04:00:00Z"], 
+                ["2024-02-10T04:00:00Z", "2024-02-13T15:20:00Z"], 
+                ["2024-02-13T15:20:00Z", "2024-02-17T02:40:00Z"], 
+                ["2024-02-17T02:40:00Z", "2024-02-20T14:00:00Z"], 
+                ["2024-02-20T14:00:00Z", "2024-02-24T01:20:00Z"], 
+                ["2024-02-24T01:20:00Z", "2024-02-27T12:40:00Z"], 
+                ["2024-02-27T12:40:00Z", "2024-03-02T00:00:00Z"], 
+                ["2024-03-02T00:00:00Z", "2024-03-05T11:20:00Z"], 
+                ["2024-03-05T11:20:00Z", "2024-03-08T22:40:00Z"], 
+                ["2024-03-08T22:40:00Z", "2024-03-12T10:00:00Z"], 
+                ["2024-03-12T10:00:00Z", "2024-03-15T21:20:00Z"], 
+                ["2024-03-15T21:20:00Z", "2024-03-19T08:40:00Z"], 
+                ["2024-03-19T08:40:00Z", "2024-03-22T20:00:00Z"], 
+                ["2024-03-22T20:00:00Z", "2024-03-26T07:20:00Z"], 
+                ["2024-03-26T07:20:00Z", "2024-03-29T18:40:00Z"],
+                ["2024-03-29T18:40:00Z", "2024-04-02T06:00:00Z"], 
+                ["2024-04-02T06:00:00Z", "2024-04-05T17:20:00Z"], 
+                ["2024-04-05T17:20:00Z", "2024-04-09T04:40:00Z"], 
+                ["2024-04-09T04:40:00Z", "2024-04-12T16:00:00Z"], 
+                ["2024-04-12T16:00:00Z", "2024-04-16T03:20:00Z"], 
+                ["2024-04-16T03:20:00Z", "2024-04-19T14:40:00Z"], 
+                ["2024-04-19T14:40:00Z", "2024-04-23T02:00:00Z"], 
+                ["2024-04-23T02:00:00Z", "2024-04-26T13:20:00Z"], 
+                ["2024-04-26T13:20:00Z", "2024-04-30T00:40:00Z"], 
+                ["2024-04-30T00:40:00Z", "2024-05-03T12:00:00Z"], 
+                ["2024-05-03T12:00:00Z", "2024-05-06T23:20:00Z"], 
+                ["2024-05-06T23:20:00Z", "2024-05-10T10:40:00Z"], 
+                ["2024-05-10T10:40:00Z", "2024-05-13T22:00:00Z"], 
+                ["2024-05-13T22:00:00Z", "2024-05-17T09:20:00Z"], 
+                ["2024-05-17T09:20:00Z", "2024-05-20T20:40:00Z"], 
+                ["2024-05-20T20:40:00Z", "2024-05-24T08:00:00Z"], 
+                ["2024-05-24T08:00:00Z", "2024-05-27T19:20:00Z"], 
+                ["2024-05-27T19:20:00Z", "2024-05-31T06:40:00Z"], 
+                ["2024-05-31T06:40:00Z", "2024-06-03T18:00:00Z"], 
+                ["2024-06-03T18:00:00Z", "2024-06-07T05:20:00Z"], 
+                ["2024-06-07T05:20:00Z", "2024-06-10T16:40:00Z"], 
+                ["2024-06-10T16:40:00Z", "2024-06-14T04:00:00Z"], 
+                ["2024-06-14T04:00:00Z", "2024-06-17T15:20:00Z"], 
+                ["2024-06-17T15:20:00Z", "2024-06-21T02:40:00Z"], 
+                ["2024-06-21T02:40:00Z", "2024-06-24T14:00:00Z"], 
+                ["2024-06-24T14:00:00Z", "2024-06-28T01:20:00Z"], 
+                ["2024-06-28T01:20:00Z", "2024-07-01T12:40:00Z"], 
+                ["2024-07-01T12:40:00Z", "2024-07-05T00:00:00Z"], 
+                ["2024-07-05T00:00:00Z", "2024-07-08T11:20:00Z"], 
+                ["2024-07-08T11:20:00Z", "2024-07-11T22:40:00Z"], 
+                ["2024-07-11T22:40:00Z", "2024-07-15T10:00:00Z"], 
+                ["2024-07-15T10:00:00Z", "2024-07-18T21:20:00Z"], 
+                ["2024-07-18T21:20:00Z", "2024-07-22T08:40:00Z"], 
+                ["2024-07-22T08:40:00Z", "2024-07-25T20:00:00Z"], 
+                ["2024-07-25T20:00:00Z", "2024-07-29T07:20:00Z"], 
+                ["2024-07-29T07:20:00Z", "2024-08-01T18:40:00Z"], 
+                ["2024-08-01T18:40:00Z", "2024-08-05T06:00:00Z"], 
+                ["2024-08-05T06:00:00Z", "2024-08-08T17:20:00Z"], 
+                ["2024-08-08T17:20:00Z", "2024-08-12T04:40:00Z"], 
+                ["2024-08-12T04:40:00Z", "2024-08-15T16:00:00Z"], 
+                ["2024-08-15T16:00:00Z", "2024-08-19T03:20:00Z"], 
+                ["2024-08-19T03:20:00Z", "2024-08-22T14:40:00Z"], 
+                ["2024-08-22T14:40:00Z", "2024-08-26T02:00:00Z"], 
+                ["2024-08-26T02:00:00Z", "2024-08-29T13:20:00Z"], 
+                ["2024-08-29T13:20:00Z", "2024-08-31T17:58:17Z"]
+               ];
+        
+        let responses = stream::iter(dates)
+            .map(|date|{
+                let mut client = OandaClient::new(
+                    Some(&account_id), 
+                    &api_key, 
+                    100,
+                    100,
+                    100
+                )
+                .unwrap();
+                async move {
+                let mut query = CandleQueryBuilder::new();
+                query.add("from", CandlesQueryBuilder::From(date[0].to_string()));
+                query.add("to", CandlesQueryBuilder::To(date[1].to_string()));
+                query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::M1));
+                let json = client.get_candles("EUR_USD", query.build()).await?;
+                Ok::<CandlesResponse, APIError>(json)
+                }
+            })
+            .buffer_unordered(10);
+
+        let count = Arc::new(AtomicUsize::new(0));
+
+
+        responses
+        .for_each(|response| async {
+            let count = Arc::clone(&count);
+            match response {
+                Ok(body) => {
+                    println!("-------------------------------------------------------");
+                    println!("Body: {:?}", body.candles.len());
+                    println!("-------------------------------------------------------");
+                    count.fetch_add(1, Ordering::SeqCst);
+                    println!("Count: {:?}", count.load(Ordering::SeqCst));
+
+                }
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    count.fetch_add(1, Ordering::SeqCst);
+                    println!("Count: {:?}", count.load(Ordering::SeqCst));
+                }
+            }
+        })
+        .await;
+
+        Ok(())
     }
 
 }

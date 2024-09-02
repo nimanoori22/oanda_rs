@@ -29,7 +29,7 @@ pub struct ConfigurationResponse {
 
 impl OandaClient {
     /// Set the client-confguable portions of an Account.
-    pub async fn patch_configuration(&self, alias: Option<String>, margin_rate: Option<String>) -> Result<ConfigurationResponse, APIError> {
+    pub async fn patch_configuration(&mut self, alias: Option<String>, margin_rate: Option<String>) -> Result<ConfigurationResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}/configuration", account_id);
             let body = json!({

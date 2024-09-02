@@ -19,10 +19,10 @@ pub struct AccountsResponse {
 
 /// Get a list of all Accounts authorized for the provided token.
 impl OandaClient {
-    pub async fn get_accounts(&self) -> Result<AccountsResponse, APIError> {
+    pub async fn get_accounts(&mut self) -> Result<AccountsResponse, APIError> {
         let url = "/v3/accounts".to_string();
 
-        let response = self.check_response(
+        let response = OandaClient::check_response(
             self.get(&url).await
         ).await?;
 
@@ -43,7 +43,7 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY")
             .expect("OANDA_API_KEY must be set");
-        let client = OandaClient::new(None, &api_key, 100, 100).unwrap();
+        let mut client = OandaClient::new(None, &api_key, 100, 100, 100).unwrap();
         
         match client.get_accounts().await {
             Ok(response) => {

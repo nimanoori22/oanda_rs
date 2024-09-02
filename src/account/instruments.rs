@@ -67,10 +67,10 @@ pub struct InstrumentsResponse {
 /// The list of tradeable instruments is dependent on the regulatory division that the Account is located in,
 /// thus should be the same for all Accounts owned by a single user.
 impl OandaClient {
-    pub async fn get_account_instruments(&self) -> Result<InstrumentsResponse, APIError> {
+    pub async fn get_account_instruments(&mut self) -> Result<InstrumentsResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}/instruments", account_id);
-            let response = self.check_response(
+            let response = OandaClient::check_response(
                 self.get(&url).await
             ).await?;
 
@@ -95,7 +95,14 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key, 100, 100).unwrap();
+        let mut client = OandaClient::new(
+                    Some(&account_id), 
+                    &api_key, 
+                    100,
+                    100,
+                    100
+                )
+                .unwrap();
 
         match client.get_account_instruments().await {
             Ok(response) => {
@@ -115,7 +122,14 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key, 100, 100).unwrap();
+        let mut client = OandaClient::new(
+                    Some(&account_id), 
+                    &api_key, 
+                    100,
+                    100,
+                    100
+                )
+                .unwrap();
 
         match client.get_account_instruments().await {
             Ok(response) => {

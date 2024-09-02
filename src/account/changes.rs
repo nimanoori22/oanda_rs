@@ -171,14 +171,14 @@ pub struct StateTrade {
 /// Endpoint used to poll an Account for its current state and changes since a specified TransactionID
 /// TODO: test this function with a valid transaction_id
 impl OandaClient {
-    pub async fn get_changes(&self, transaction_id: &String) -> Result<ChangesResponse, APIError> {
+    pub async fn get_changes(&mut self, transaction_id: &String) -> Result<ChangesResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!(
                 "/v3/accounts/{}/changes?sinceTransactionID={}",
                 account_id,
                 transaction_id
             );
-            let response = self.check_response(
+            let response = OandaClient::check_response(
                 self.get(&url).await
             ).await?;
             let changes : ChangesResponse = serde_json::from_value(response).map_err(APIError::from)?;
@@ -200,7 +200,14 @@ mod tests {
         dotenv::dotenv().ok();
         let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key, 100, 100).unwrap();
+        let mut client = OandaClient::new(
+                    Some(&account_id), 
+                    &api_key, 
+                    100,
+                    100,
+                    100
+                )
+                .unwrap();
         let transaction_id = "6357".to_string();
 
         match client.get_changes(&transaction_id).await {

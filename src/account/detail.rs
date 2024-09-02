@@ -57,10 +57,10 @@ pub struct AccountResponse {
 impl OandaClient {
     /// Get the full details for a single Account that a client has access to.
     /// Full pending Order, open Trade and open Position representations are provided.
-    pub async fn get_account(&self) -> Result<AccountResponse, APIError> {
+    pub async fn get_account(&mut self) -> Result<AccountResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}", account_id);
-            let response = self.check_response(
+            let response = OandaClient::check_response(
                 self.get(&url).await
             ).await?;
             let account: AccountResponse = serde_json::from_value(response).map_err(APIError::from)?;
@@ -83,7 +83,14 @@ mod tests {
             .expect("OANDA_API_KEY must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
-        let client = OandaClient::new(Some(&account_id), &api_key, 100, 100).unwrap();
+        let mut client = OandaClient::new(
+                    Some(&account_id), 
+                    &api_key, 
+                    100,
+                    100,
+                    100
+                )
+                .unwrap();
         
         match client.get_account().await {
             Ok(response) => {
