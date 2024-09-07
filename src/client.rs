@@ -4,12 +4,11 @@ use serde_json::Value;
 
 use reqwest::{Client, RequestBuilder, Request};
 use tower::buffer::Buffer;
-use tower::limit::ConcurrencyLimit;
-use tower::{limit::rate::RateLimit, ServiceBuilder, Service};
+use tower::{limit::{rate::RateLimit, ConcurrencyLimit}, ServiceBuilder, Service};
+use tower::limit::concurrency::future::ResponseFuture;
 
 use std::error::Error as StdError;
 use std::{future::poll_fn, time::Duration};
-
 
 
 pub struct RateLimiter<S, T>
@@ -20,7 +19,7 @@ where
     S::Future: Send + 'static,
     T: Send + 'static,
 {
-    service: RateLimit<Buffer<ConcurrencyLimit<S>, T>>,
+    service: Buffer<T, ResponseFuture<<S as Service<T>>::Future>>,
 }
 
 impl<S, T> RateLimiter<S, T>
@@ -36,10 +35,10 @@ where
             .try_into()
             .map_err(|_| APIError::Other("Invalid rate limit value".to_string()))?;
 
-        let rate_limited_service = ServiceBuilder::new()
-            .rate_limit(rate_limit_u64, Duration::from_secs(1))
+        let rate_limited_service: Buffer<T, ResponseFuture<<S as Service<T>>::Future>> = ServiceBuilder::new()
             .buffer(buffer_size)
             .concurrency_limit(concurrency_limit)
+            .rate_limit(rate_limit_u64, Duration::from_secs(1))
             .service(service);
 
         Ok(RateLimiter {
