@@ -100,7 +100,8 @@ mod tests {
                     &api_key, 
                     100,
                     100,
-                    100
+                    100,
+                    5
                 )
                 .unwrap();
 
@@ -127,7 +128,8 @@ mod tests {
                     &api_key, 
                     100,
                     100,
-                    100
+                    100,
+                    5
                 )
                 .unwrap();
 

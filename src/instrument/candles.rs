@@ -182,7 +182,8 @@ mod tests {
                     &api_key, 
                     100,
                     100,
-                    100
+                    100,
+                    5
                 );
 
         let mut client = match client_result {
@@ -221,7 +222,7 @@ mod tests {
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
 
-        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100, 100);
+        let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100, 100, 5);
         let mut client = match client_result {
             Ok(v) => v,
             Err(e) => {
@@ -341,7 +342,8 @@ mod tests {
                     &api_key, 
                     100,
                     100,
-                    100
+                    100,
+                    5
                 )
                 .unwrap();
                 async move {
