@@ -1,111 +1,13 @@
 // External crates
 use futures::future::poll_fn;
-use futures_util::future;
 use reqwest::{Client, Request, RequestBuilder};
 use serde_json::Value;
-use tower::{Service, ServiceBuilder};
-use tower::buffer::Buffer;
-use tower::limit::concurrency::future::ResponseFuture;
-use tower::retry::{Policy, Retry};
-
-// Standard library
-use std::error::Error as StdError;
-use std::time::Duration;
+use tower::Service;
 
 // Local modules
 use crate::error::APIError;
+use crate::policies::rate_limiter::RateLimiter;
 
-
-type Req = String;
-type Res = String;
-
-
-#[derive(Clone)]
-struct Attempts(usize);
-
-
-impl<E> Policy<Req, Res, E> for Attempts {
-    type Future = future::Ready<()>;
-
-    fn retry(&mut self, req: &mut Req, result: &mut Result<Res, E>) -> Option<Self::Future> {
-        match result {
-            Ok(_) => {
-                // Treat all `Response`s as success,
-                // so don't retry...
-                None
-            },
-            Err(_) => {
-                // Treat all errors as failures...
-                // But we limit the number of attempts...
-                if self.0 > 0 {
-                    // Try again!
-                    println!("Retrying request: {:?}", req);
-                    self.0 -= 1;
-                    Some(future::ready(()))
-                } else {
-                    // Used all our attempts, no retry...
-                    None
-                }
-            }
-        }
-    }
-
-    fn clone_request(&mut self, req: &Req) -> Option<Req> {
-        Some(req.clone())
-    }
-}
-
-
-pub struct RateLimiter<S, T>
-where
-    S: Service<T> + Clone + Send + 'static,
-    S::Response: Send + 'static,
-    S::Error: Into<APIError> + Into<Box<dyn StdError + Send + Sync + 'static>> + Send + Sync + 'static,
-    S::Future: Send + 'static,
-    T: Send + 'static,
-{
-    service: Retry<Attempts, Buffer<T, ResponseFuture<<S as Service<T>>::Future>>>,
-}
-
-impl<S, T> RateLimiter<S, T>
-where
-    S: Service<T> + Clone + Send + 'static,
-    S::Response: Send + 'static,
-    S::Error: Into<APIError> + Into<Box<dyn StdError + Send + Sync + 'static>> + Send + Sync + 'static,
-    S::Future: Send + 'static,
-    T: Send + 'static,
-{
-    pub fn new(
-        service: S, 
-        rate_limit: usize, 
-        buffer_size: usize, 
-        concurrency_limit: usize, 
-        retry_attempts: usize
-    ) -> Result<Self, APIError> {
-
-        let rate_limit_u64: u64 = rate_limit
-            .try_into()
-            .map_err(|_| APIError::Other("Invalid rate limit value".to_string()))?;
-
-        let rate_limited_service: Buffer<T, ResponseFuture<<S as Service<T>>::Future>> = ServiceBuilder::new()
-            .buffer(buffer_size)
-            .concurrency_limit(concurrency_limit)
-            .rate_limit(rate_limit_u64, Duration::from_secs(1))
-            .service(service);
-
-        let retry_policy = Attempts(retry_attempts);
-
-        let retry_service = Retry::new(retry_policy, rate_limited_service);
-
-        Ok(RateLimiter {
-            service: retry_service,
-        })
-    }
-
-    pub async fn call(&mut self, request: T) -> Result<S::Response, APIError> {
-        self.service.get_mut().call(request).await.map_err(|e| APIError::from(e))
-    }
-}
 
 pub struct OandaClient {
     client: RateLimiter<Client, Request>,
@@ -115,6 +17,7 @@ pub struct OandaClient {
 }
 
 impl OandaClient {
+
     pub fn new(
         account_id: Option<&str>, 
         api_key: &str, 
@@ -123,6 +26,7 @@ impl OandaClient {
         rate_limit: usize, 
         retry_attempts: usize
     ) -> Result<OandaClient, APIError> {
+
         let client = Client::new();
         let service = RateLimiter::new(
             client, 
@@ -151,7 +55,8 @@ impl OandaClient {
     }
 
     async fn send_request(&mut self, request: RequestBuilder) -> Result<Value, APIError> {
-        poll_fn(|cx| self.client.service.get_mut().poll_ready(cx))
+
+        poll_fn(|cx| self.client.service.poll_ready(cx))
             .await
             .map_err(|e| APIError::Other(format!("Service not ready: {}", e)))?;
 
@@ -159,9 +64,16 @@ impl OandaClient {
             .header("Authorization", format!("Bearer {}", self.api_key))
             .build()?;
 
-        let response = self.client.call(request).await.map_err(|e| APIError::Other(e.to_string()))?;
+        let response = self
+            .client
+            .call(request)
+            .await
+            .map_err(|e| APIError::Other(e.to_string()))?;
 
-        let response = response.json::<Value>().await.map_err(APIError::from)?;
+        let response = response
+            .json::<Value>()
+            .await
+            .map_err(APIError::from)?;
 
         OandaClient::check_response(Ok(response)).await
     }

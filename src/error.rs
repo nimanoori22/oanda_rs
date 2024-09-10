@@ -1,5 +1,4 @@
 use std::error::Error as StdError;
-
 use thiserror::Error as ErrorMacro;
 
 
@@ -11,6 +10,8 @@ pub enum APIError {
     Serde(#[from] serde_json::Error),
     #[error("Custom error: {0}")]
     Other(String),
+    #[error("Clone error: {0}")]
+    Clone(String),
 }
 
 
