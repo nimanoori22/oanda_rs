@@ -4,7 +4,7 @@ use crate::error::APIError;
 use serde::{Serialize, Deserialize};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Granularity {
     S5,
     S10,
@@ -59,7 +59,7 @@ impl ToString for Granularity {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[allow(dead_code)]
 pub struct CandlesResponse {
     pub candles: Vec<Candle>,
@@ -67,7 +67,7 @@ pub struct CandlesResponse {
     pub instrument: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[allow(dead_code)]
 pub struct Candle {
     pub complete: bool,
@@ -76,7 +76,7 @@ pub struct Candle {
     pub volume: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[allow(dead_code)]
 pub struct Mid {
     pub c: String,
@@ -86,7 +86,8 @@ pub struct Mid {
 }
 
 
-pub enum CandlesQueryBuilder {
+#[derive(Debug, Clone)]
+pub enum CandleQueryParam {
     Count(i32),
     From(String),
     To(String),
@@ -100,43 +101,44 @@ pub enum CandlesQueryBuilder {
 }
 
 
-impl ToString for CandlesQueryBuilder {
+impl ToString for CandleQueryParam {
     fn to_string(&self) -> String {
         match self {
-            CandlesQueryBuilder::Count(v) => v.to_string(),
-            CandlesQueryBuilder::From(v) => v.clone(),
-            CandlesQueryBuilder::To(v) => v.clone(),
-            CandlesQueryBuilder::Granularity(v) => v.to_string(),
-            CandlesQueryBuilder::Price(v) => v.clone(),
-            CandlesQueryBuilder::Smooth(v) => v.to_string(),
-            CandlesQueryBuilder::IncludeFirst(v) => v.to_string(),
-            CandlesQueryBuilder::DailyAlignment(v) => v.to_string(),
-            CandlesQueryBuilder::WeeklyAlignment(v) => v.to_string(),
-            CandlesQueryBuilder::AlignmentTimezone(v) => v.clone(),
+            CandleQueryParam::Count(v) => v.to_string(),
+            CandleQueryParam::From(v) => v.clone(),
+            CandleQueryParam::To(v) => v.clone(),
+            CandleQueryParam::Granularity(v) => v.to_string(),
+            CandleQueryParam::Price(v) => v.clone(),
+            CandleQueryParam::Smooth(v) => v.to_string(),
+            CandleQueryParam::IncludeFirst(v) => v.to_string(),
+            CandleQueryParam::DailyAlignment(v) => v.to_string(),
+            CandleQueryParam::WeeklyAlignment(v) => v.to_string(),
+            CandleQueryParam::AlignmentTimezone(v) => v.clone(),
         }
     }
 }
 
 
-pub struct CandleQueryBuilder {
-    params: HashMap<String, String>,
+#[derive(Debug, Clone)]
+pub struct CandleQuery {
+    parameters: HashMap<String, String>,
 }
 
 
-impl CandleQueryBuilder {
+impl CandleQuery {
     pub fn new() -> Self {
         Self {
-            params: HashMap::new(),
+            parameters: HashMap::new(),
         }
     }
 
-    pub fn add(&mut self, key: &str, value: CandlesQueryBuilder) -> &mut Self {
-        self.params.insert(key.to_string(), value.to_string());
+    pub fn add_param(&mut self, key: &str, value: CandleQueryParam) -> &mut Self {
+        self.parameters.insert(key.to_string(), value.to_string());
         self
     }
 
     pub fn build(&self) -> HashMap<String, String> {
-        self.params.clone()
+        self.parameters.clone()
     }
 }
 
@@ -195,9 +197,9 @@ mod tests {
             }
         };
 
-        let mut query = CandleQueryBuilder::new();
-        query.add("count", CandlesQueryBuilder::Count(5));
-        query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::H1));
+        let mut query = CandleQuery::new();
+        query.add_param("count", CandleQueryParam::Count(5));
+        query.add_param("granularity", CandleQueryParam::Granularity(Granularity::H1));
 
         let response = client.get_candles("EUR_USD", query.build()).await;
 
@@ -232,10 +234,10 @@ mod tests {
             }
         };
 
-        let mut query = CandleQueryBuilder::new();
-        query.add("from", CandlesQueryBuilder::From("2021-01-04T00:00:00Z".to_string()));
-        query.add("to", CandlesQueryBuilder::To("2021-01-05T00:00:00Z".to_string()));
-        query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::H1));
+        let mut query = CandleQuery::new();
+        query.add_param("from", CandleQueryParam::From("2021-01-04T00:00:00Z".to_string()));
+        query.add_param("to", CandleQueryParam::To("2021-01-05T00:00:00Z".to_string()));
+        query.add_param("granularity", CandleQueryParam::Granularity(Granularity::H1));
 
         let response = client.get_candles("EUR_USD", query.build()).await;
         println!("Response: {:?}", response);
@@ -347,10 +349,10 @@ mod tests {
                 )
                 .unwrap();
                 async move {
-                let mut query = CandleQueryBuilder::new();
-                query.add("from", CandlesQueryBuilder::From(date[0].to_string()));
-                query.add("to", CandlesQueryBuilder::To(date[1].to_string()));
-                query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::M1));
+                let mut query = CandleQuery::new();
+                query.add_param("from", CandleQueryParam::From(date[0].to_string()));
+                query.add_param("to", CandleQueryParam::To(date[1].to_string()));
+                query.add_param("granularity", CandleQueryParam::Granularity(Granularity::M1));
                 let json = client.get_candles("EUR_USD", query.build()).await?;
                 Ok::<CandlesResponse, APIError>(json)
                 }

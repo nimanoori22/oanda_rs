@@ -52,7 +52,7 @@ Here is an example of how to use the library to get historical candle data:
 
 ```rust
 use oanda_rs::client::OandaClient;
-use oanda_rs::instrument::candles::{CandleQueryBuilder, Granularity};
+use oanda_rs::instrument::candles::{CandleQuery, Granularity};
 use std::collections::HashMap;
 use dotenv::dotenv;
 
@@ -71,9 +71,9 @@ async fn main() {
         }
     };
 
-    let mut query = CandleQueryBuilder::new();
-    query.add("count", CandlesQueryBuilder::Count(5));
-    query.add("granularity", CandlesQueryBuilder::Granularity(Granularity::H1));
+    let mut query = CandleQuery::new();
+    query.add("count", CandleQueryParam::Count(5));
+    query.add("granularity", CandleQueryParam::Granularity(Granularity::H1));
 
     let response = client.get_candles("EUR_USD", query.build()).await;
 
