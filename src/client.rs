@@ -1,16 +1,20 @@
+use std::task::{Context, Poll};
+
 // External crates
-use futures::future::poll_fn;
-use reqwest::{Client, Request, RequestBuilder};
+use futures::future::{poll_fn, BoxFuture};
+use reqwest::{Client, RequestBuilder};
 use serde_json::Value;
 use tower::Service;
 
 // Local modules
 use crate::error::APIError;
 use crate::policies::rate_limiter::RateLimiter;
+use crate::utils::clonable_request::ClonableRequest;
 
 
+#[derive(Clone)]
 pub struct OandaClient {
-    client: RateLimiter<Client, Request>,
+    client: RateLimiter<ClientWrapper>,
     account_id: Option<String>,
     api_key: String,
     base_url: String,
@@ -29,7 +33,7 @@ impl OandaClient {
 
         let client = Client::new();
         let service = RateLimiter::new(
-            client, 
+            ClientWrapper(client), 
             rate_limit, 
             buffer_size, 
             concurrency_limit, 
@@ -66,7 +70,7 @@ impl OandaClient {
 
         let response = self
             .client
-            .call(request)
+            .call(ClonableRequest::new(request))
             .await
             .map_err(|e| APIError::Other(e.to_string()))?;
 
@@ -101,6 +105,27 @@ impl OandaClient {
             },
             Err(err) => Err(err),
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct ClientWrapper(Client);
+
+impl Service<ClonableRequest> for ClientWrapper {
+    type Response = reqwest::Response;
+    type Error = reqwest::Error;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: ClonableRequest) -> Self::Future {
+        let client = self.0.clone();
+        let request = req.into_inner();
+        Box::pin(async move {
+            client.execute(request).await
+        })
     }
 }
 

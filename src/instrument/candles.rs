@@ -165,7 +165,8 @@ impl OandaClient
 
 mod tests {
 
-    use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
+    use std::{sync::{atomic::{AtomicUsize, Ordering}, Arc}, time::Instant};
+    use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 
     use futures::{stream, StreamExt};
 
@@ -262,6 +263,14 @@ mod tests {
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
 
+        let client = OandaClient::new(
+            Some(&account_id), 
+            &api_key, 
+            100,
+            100,
+            100,
+            5
+        ).unwrap();
 
         let dates = vec![
                 ["2023-12-30T12:00:00Z", "2024-01-02T23:20:00Z"], 
@@ -336,28 +345,25 @@ mod tests {
                 ["2024-08-26T02:00:00Z", "2024-08-29T13:20:00Z"], 
                 ["2024-08-29T13:20:00Z", "2024-08-31T17:58:17Z"]
                ];
+
+        // Start timing
+        let start = Instant::now();
         
         let responses = stream::iter(dates)
-            .map(|date|{
-                let mut client = OandaClient::new(
-                    Some(&account_id), 
-                    &api_key, 
-                    100,
-                    100,
-                    100,
-                    5
-                )
-                .unwrap();
+        .map(|date|{
+                let mut client = client.clone();
                 async move {
                 let mut query = CandleQuery::new();
                 query.add_param("from", CandleQueryParam::From(date[0].to_string()));
                 query.add_param("to", CandleQueryParam::To(date[1].to_string()));
                 query.add_param("granularity", CandleQueryParam::Granularity(Granularity::M1));
-                let json = client.get_candles("EUR_USD", query.build()).await?;
+                let json = client
+                    .get_candles("EUR_USD", query.build())
+                    .await?;
                 Ok::<CandlesResponse, APIError>(json)
                 }
             })
-            .buffer_unordered(10);
+            .buffer_unordered(100);
 
         let count = Arc::new(AtomicUsize::new(0));
 
@@ -383,7 +389,155 @@ mod tests {
         })
         .await;
 
+        // End timing
+        let duration = start.elapsed();
+        println!("Time elapsed in expensive_function() is: {:?}", duration);
         Ok(())
     }
+
+// this function is here for comparing the perfomance
+// of oanda_rs and raw reqwest client
+#[tokio::test]
+async fn test_get_candles_from_oanda() -> Result<(), APIError> {
+    let client = reqwest::Client::new();
+
+    let dates = vec![
+                ["2023-12-30T12:00:00Z", "2024-01-02T23:20:00Z"], 
+                ["2024-01-02T23:20:00Z", "2024-01-06T10:40:00Z"], 
+                ["2024-01-06T10:40:00Z", "2024-01-09T22:00:00Z"], 
+                ["2024-01-09T22:00:00Z", "2024-01-13T09:20:00Z"], 
+                ["2024-01-13T09:20:00Z", "2024-01-16T20:40:00Z"], 
+                ["2024-01-16T20:40:00Z", "2024-01-20T08:00:00Z"], 
+                ["2024-01-20T08:00:00Z", "2024-01-23T19:20:00Z"], 
+                ["2024-01-23T19:20:00Z", "2024-01-27T06:40:00Z"], 
+                ["2024-01-27T06:40:00Z", "2024-01-30T18:00:00Z"], 
+                ["2024-01-30T18:00:00Z", "2024-02-03T05:20:00Z"], 
+                ["2024-02-03T05:20:00Z", "2024-02-06T16:40:00Z"], 
+                ["2024-02-06T16:40:00Z", "2024-02-10T04:00:00Z"], 
+                ["2024-02-10T04:00:00Z", "2024-02-13T15:20:00Z"], 
+                ["2024-02-13T15:20:00Z", "2024-02-17T02:40:00Z"], 
+                ["2024-02-17T02:40:00Z", "2024-02-20T14:00:00Z"], 
+                ["2024-02-20T14:00:00Z", "2024-02-24T01:20:00Z"], 
+                ["2024-02-24T01:20:00Z", "2024-02-27T12:40:00Z"], 
+                ["2024-02-27T12:40:00Z", "2024-03-02T00:00:00Z"], 
+                ["2024-03-02T00:00:00Z", "2024-03-05T11:20:00Z"], 
+                ["2024-03-05T11:20:00Z", "2024-03-08T22:40:00Z"], 
+                ["2024-03-08T22:40:00Z", "2024-03-12T10:00:00Z"], 
+                ["2024-03-12T10:00:00Z", "2024-03-15T21:20:00Z"], 
+                ["2024-03-15T21:20:00Z", "2024-03-19T08:40:00Z"], 
+                ["2024-03-19T08:40:00Z", "2024-03-22T20:00:00Z"], 
+                ["2024-03-22T20:00:00Z", "2024-03-26T07:20:00Z"], 
+                ["2024-03-26T07:20:00Z", "2024-03-29T18:40:00Z"],
+                ["2024-03-29T18:40:00Z", "2024-04-02T06:00:00Z"], 
+                ["2024-04-02T06:00:00Z", "2024-04-05T17:20:00Z"], 
+                ["2024-04-05T17:20:00Z", "2024-04-09T04:40:00Z"], 
+                ["2024-04-09T04:40:00Z", "2024-04-12T16:00:00Z"], 
+                ["2024-04-12T16:00:00Z", "2024-04-16T03:20:00Z"], 
+                ["2024-04-16T03:20:00Z", "2024-04-19T14:40:00Z"], 
+                ["2024-04-19T14:40:00Z", "2024-04-23T02:00:00Z"], 
+                ["2024-04-23T02:00:00Z", "2024-04-26T13:20:00Z"], 
+                ["2024-04-26T13:20:00Z", "2024-04-30T00:40:00Z"], 
+                ["2024-04-30T00:40:00Z", "2024-05-03T12:00:00Z"], 
+                ["2024-05-03T12:00:00Z", "2024-05-06T23:20:00Z"], 
+                ["2024-05-06T23:20:00Z", "2024-05-10T10:40:00Z"], 
+                ["2024-05-10T10:40:00Z", "2024-05-13T22:00:00Z"], 
+                ["2024-05-13T22:00:00Z", "2024-05-17T09:20:00Z"], 
+                ["2024-05-17T09:20:00Z", "2024-05-20T20:40:00Z"], 
+                ["2024-05-20T20:40:00Z", "2024-05-24T08:00:00Z"], 
+                ["2024-05-24T08:00:00Z", "2024-05-27T19:20:00Z"], 
+                ["2024-05-27T19:20:00Z", "2024-05-31T06:40:00Z"], 
+                ["2024-05-31T06:40:00Z", "2024-06-03T18:00:00Z"], 
+                ["2024-06-03T18:00:00Z", "2024-06-07T05:20:00Z"], 
+                ["2024-06-07T05:20:00Z", "2024-06-10T16:40:00Z"], 
+                ["2024-06-10T16:40:00Z", "2024-06-14T04:00:00Z"], 
+                ["2024-06-14T04:00:00Z", "2024-06-17T15:20:00Z"], 
+                ["2024-06-17T15:20:00Z", "2024-06-21T02:40:00Z"], 
+                ["2024-06-21T02:40:00Z", "2024-06-24T14:00:00Z"], 
+                ["2024-06-24T14:00:00Z", "2024-06-28T01:20:00Z"], 
+                ["2024-06-28T01:20:00Z", "2024-07-01T12:40:00Z"], 
+                ["2024-07-01T12:40:00Z", "2024-07-05T00:00:00Z"], 
+                ["2024-07-05T00:00:00Z", "2024-07-08T11:20:00Z"], 
+                ["2024-07-08T11:20:00Z", "2024-07-11T22:40:00Z"], 
+                ["2024-07-11T22:40:00Z", "2024-07-15T10:00:00Z"], 
+                ["2024-07-15T10:00:00Z", "2024-07-18T21:20:00Z"], 
+                ["2024-07-18T21:20:00Z", "2024-07-22T08:40:00Z"], 
+                ["2024-07-22T08:40:00Z", "2024-07-25T20:00:00Z"], 
+                ["2024-07-25T20:00:00Z", "2024-07-29T07:20:00Z"], 
+                ["2024-07-29T07:20:00Z", "2024-08-01T18:40:00Z"], 
+                ["2024-08-01T18:40:00Z", "2024-08-05T06:00:00Z"], 
+                ["2024-08-05T06:00:00Z", "2024-08-08T17:20:00Z"], 
+                ["2024-08-08T17:20:00Z", "2024-08-12T04:40:00Z"], 
+                ["2024-08-12T04:40:00Z", "2024-08-15T16:00:00Z"], 
+                ["2024-08-15T16:00:00Z", "2024-08-19T03:20:00Z"], 
+                ["2024-08-19T03:20:00Z", "2024-08-22T14:40:00Z"], 
+                ["2024-08-22T14:40:00Z", "2024-08-26T02:00:00Z"], 
+                ["2024-08-26T02:00:00Z", "2024-08-29T13:20:00Z"], 
+                ["2024-08-29T13:20:00Z", "2024-08-31T17:58:17Z"]
+               ];
+
+    let mut urls: Vec<String> = Vec::new();
+
+    for date_batch in dates {
+        let url = format!(
+            "https://api-fxpractice.oanda.com/v3/instruments/EUR_USD/candles?from={}&to={}&granularity=M1",
+            date_batch.first().unwrap(),
+            date_batch.last().unwrap()
+        );
+        urls.push(url);
+    }
+
+    // Create headers
+    dotenv::dotenv().ok();
+    let api_key = std::env::var("OANDA_API_KEY").expect("OANDA_API_KEY must be set");
+    let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
+
+    let mut headers = HeaderMap::new();
+    headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", api_key)).unwrap());
+    headers.insert("Account-ID", HeaderValue::from_str(&account_id).unwrap());
+
+    // Start timing
+    let start = Instant::now();
+
+    let responses = stream::iter(urls)
+        .map(|url| {
+            let client = &client;
+            let headers = headers.clone();
+            async move {
+                let response = client.get(&url).headers(headers).send().await?;
+                let json: CandlesResponse = response.json().await?;
+                Ok::<CandlesResponse, reqwest::Error>(json)
+            }
+        })
+        .buffer_unordered(100);
+
+    let count = Arc::new(AtomicUsize::new(0));    
+
+    responses
+        .for_each(|response| async {
+            let count = Arc::clone(&count);
+            match response {
+                Ok(body) => {
+                    println!("-------------------------------------------------------");
+                    println!("Body: {:?}", body.candles.len());
+                    println!("-------------------------------------------------------");
+                    count.fetch_add(1, Ordering::SeqCst);
+                    println!("Count: {:?}", count.load(Ordering::SeqCst));
+
+                }
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    count.fetch_add(1, Ordering::SeqCst);
+                    println!("Count: {:?}", count.load(Ordering::SeqCst));
+                }
+            }
+        })
+        .await;
+    
+    // End timing
+    let duration = start.elapsed();
+    println!("Time elapsed: {:?}", duration);
+
+    Ok(())
+}
 
 }

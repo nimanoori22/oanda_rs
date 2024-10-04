@@ -17,8 +17,8 @@ pub struct AccountsResponse {
 }
 
 
-/// Get a list of all Accounts authorized for the provided token.
 impl OandaClient {
+    /// Get a list of all Accounts authorized for the provided token.
     pub async fn get_accounts(&mut self) -> Result<AccountsResponse, APIError> {
         let url = "/v3/accounts".to_string();
 

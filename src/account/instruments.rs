@@ -63,10 +63,11 @@ pub struct InstrumentsResponse {
     pub lastTransactionID: String,
 }
 
-/// Get a list of tradeable instruments for the given Account.
-/// The list of tradeable instruments is dependent on the regulatory division that the Account is located in,
-/// thus should be the same for all Accounts owned by a single user.
+
 impl OandaClient {
+    /// Get a list of tradeable instruments for the given Account.
+    /// The list of tradeable instruments is dependent on the regulatory division that the Account is located in,
+    /// thus should be the same for all Accounts owned by a single user.
     pub async fn get_account_instruments(&mut self) -> Result<InstrumentsResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!("/v3/accounts/{}/instruments", account_id);

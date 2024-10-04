@@ -1,38 +1,32 @@
 use tokio::time::Duration;
-use tower::retry::Retry;
-use tower::limit::{ConcurrencyLimit, RateLimit};
 use tower::{Service, ServiceBuilder};
-use tower::buffer::Buffer;
+use tower::util::BoxCloneService;
 
 use std::error::Error as StdError;
-use std::marker::PhantomData;
 
-use crate::utils::try_clone::TryClone;
+use crate::utils::clonable_request::ClonableRequest;
 use crate::error::APIError;
 use crate::policies::retry_policy::RetryPolicy;
 
 
-
-pub struct RateLimiter<S, T>
+#[derive(Clone, Debug)]
+pub struct RateLimiter<S>
 where
-    S: Service<T> + Clone + Send + 'static,
+    S: Service<ClonableRequest> + Clone + Send + 'static,
     S::Response: Send + 'static,
     S::Error: Into<APIError> + Into<Box<dyn StdError + Send + Sync + 'static>> + Send + Sync + 'static,
     S::Future: Send + 'static,
-    T: TryClone + Send + 'static,
 {
-    pub service: Buffer<T, <ConcurrencyLimit<RateLimit<Retry<RetryPolicy<T>, S>>> as Service<T>>::Future>,
+    pub service: BoxCloneService<ClonableRequest, <S as Service<ClonableRequest>>::Response, Box<dyn StdError + Send + Sync>>,
 }
 
-impl<S, T> RateLimiter<S, T>
+impl<S> RateLimiter<S>
 where
-    S: Service<T> + Clone + Send + 'static,
+    S: Service<ClonableRequest> + Clone + Send + 'static,
     S::Response: Send + 'static,
     S::Error: Into<APIError> + Into<Box<dyn StdError + Send + Sync + 'static>> + Send + Sync + 'static,
     S::Future: Send + 'static,
-    T: TryClone + Send + 'static,
 {
-    
     pub fn new(
         service: S, 
         rate_limit: usize, 
@@ -45,20 +39,22 @@ where
             .try_into()
             .map_err(|_| APIError::Other("Invalid rate limit value".to_string()))?;
 
-        let retry_policy = RetryPolicy { attempts: retry_attempts, _marker: PhantomData };
+        let retry_policy = RetryPolicy { attempts: retry_attempts };
 
-        let rate_limited_service = ServiceBuilder::new()
+        let rate_limited_service: BoxCloneService<ClonableRequest, <S as Service<ClonableRequest>>::Response, Box<dyn StdError + Send + Sync>> = ServiceBuilder::new()
+            .boxed_clone()
             .buffer(buffer_size)
             .concurrency_limit(concurrency_limit)
             .rate_limit(rate_limit_u64, Duration::from_secs(1))
-            .service(Retry::new(retry_policy, service)); // Apply the retry policy
+            .retry(retry_policy)
+            .service(service); // Apply the retry policy and box the service
 
         Ok(RateLimiter {
             service: rate_limited_service,
         })
     }
 
-    pub async fn call(&mut self, request: T) -> Result<S::Response, APIError> {
+    pub async fn call(&mut self, request: ClonableRequest) -> Result<S::Response, APIError> {
         self
         .service
         .call(request)

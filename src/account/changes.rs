@@ -168,9 +168,11 @@ pub struct StateTrade {
     pub unrealizedPL: String,
 }
 
-/// Endpoint used to poll an Account for its current state and changes since a specified TransactionID
-/// TODO: test this function with a valid transaction_id
+
+
 impl OandaClient {
+    /// Endpoint used to poll an Account for its current state and changes since a specified TransactionID
+    // TODO: test this function with a valid transaction_id
     pub async fn get_changes(&mut self, transaction_id: &String) -> Result<ChangesResponse, APIError> {
         if let Some(account_id) = self.get_account_id() {
             let url = format!(

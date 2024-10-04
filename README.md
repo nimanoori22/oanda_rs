@@ -93,7 +93,7 @@ async fn main() {
 This package includes built-in rate limiting and retry capabilities. You can configure the rate limits and retry settings when initializing the OandaClient:
 
 ```rust
-let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100, 100, 5);
+let mut client = OandaClient::new(Some(&account_id), &api_key, 100, 100, 100, 5).unwrap();
 
 ```
 The parameters are:
