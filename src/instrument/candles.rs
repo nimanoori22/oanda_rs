@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::client::OandaClient;
 use crate::error::APIError;
 use serde::{Serialize, Deserialize};
+use crate::error::APIError as Err;
 
 
 #[derive(Debug, Clone)]
@@ -28,6 +29,37 @@ pub enum Granularity {
     W,
     M,
 }
+
+
+impl Granularity {
+    pub fn from_str(s: &str) -> Result<Granularity, Err> {
+        match s {
+            "S5" => Ok(Granularity::S5),
+            "S10" => Ok(Granularity::S10),
+            "S15" => Ok(Granularity::S15),
+            "S30" => Ok(Granularity::S30),
+            "M1" => Ok(Granularity::M1),
+            "M2" => Ok(Granularity::M2),
+            "M4" => Ok(Granularity::M4),
+            "M5" => Ok(Granularity::M5),
+            "M10" => Ok(Granularity::M10),
+            "M15" => Ok(Granularity::M15),
+            "M30" => Ok(Granularity::M30),
+            "H1" => Ok(Granularity::H1),
+            "H2" => Ok(Granularity::H2),
+            "H3" => Ok(Granularity::H3),
+            "H4" => Ok(Granularity::H4),
+            "H6" => Ok(Granularity::H6),
+            "H8" => Ok(Granularity::H8),
+            "H12" => Ok(Granularity::H12),
+            "D" => Ok(Granularity::D),
+            "W" => Ok(Granularity::W),
+            "M" => Ok(Granularity::M),
+            _ => Err(APIError::Other("Invalid granularity".to_string())),
+        }
+    }
+}
+
 
 impl ToString for Granularity {
     fn to_string(&self) -> String {
