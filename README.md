@@ -46,10 +46,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Candle requests do not require an account ID. For account-specific endpoints,
-pass an account ID as the first constructor argument or call
-`client.set_account_id(&account_id)`. Use `client.get_accounts().await?` to list
-the accounts available to your token.
+### Find your account ID
+
+Your API token authenticates requests and grants access to your subaccounts.
+Account-specific endpoints need an account ID to select a subaccount. Candle
+requests and account listing do not require one.
+
+Using the API key loaded above, list your account IDs with `get_accounts()`:
+
+```rust
+let mut client = OandaClient::new_with_config(None, &api_key, ClientConfig::default())?;
+let accounts = client.get_accounts().await?;
+for account in accounts.accounts {
+    println!("{}", account.id);
+}
+```
+
+This calls [`GET /v3/accounts`](https://developer.oanda.com/rest-live-v20/account-ep/)
+using your bearer token. Choose the account you want to use and add its ID to
+`.env`:
+
+```dotenv
+OANDA_ACCOUNT_ID=your_account_id
+```
+
+Load and select it before calling an account-specific endpoint:
+
+```rust
+let account_id = std::env::var("OANDA_ACCOUNT_ID")?;
+client.set_account_id(&account_id);
+let summary = client.get_account_summary().await?;
+```
+
+You can also pass `Some(&account_id)` as the first constructor argument.
+Account details, summaries, instruments, configuration, and account changes all
+use the selected account ID in their request URL.
 
 ## Configuration
 
