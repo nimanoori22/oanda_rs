@@ -77,8 +77,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_account_summary() {
         dotenv::dotenv().ok();
-        let api_key = std::env::var("OANDA_API_KEY")
-            .expect("OANDA_API_KEY must be set");
+        let api_key = std::env::var("OANDA_API_TOKEN")
+            .expect("OANDA_API_TOKEN must be set");
         let account_id = std::env::var("OANDA_ACCOUNT_ID")
             .expect("OANDA_ACCOUNT_ID must be set");
         let mut client = OandaClient::new(

@@ -22,3 +22,4 @@ Cargo.lock
 .env
 
 .vscode/
+/eur_usd_h1_100.json
