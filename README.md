@@ -1,231 +1,163 @@
 # oanda_rs
 
-This is an asynchronous Rust library for interacting with the OANDA API.
+An asynchronous Rust library for the OANDA v20 REST API, with account data,
+historical candles, rate limiting, retries, and optional proxy support.
 
-
-## Features
-
-- Retrieve account details, instruments, and historical candle data.
-- Rate limiting and retry capabilities.
-- Asynchronous support using `tokio`.
-
-
-## Getting Started
-
-1. Clone the repository:
+## Getting started
 
 ```bash
 git clone https://github.com/nimanoori22/oanda_rs.git
 cd oanda_rs
-```
-
-2. Install the dependencies:
-```bash
 cargo build
 ```
 
 ## Usage
 
-**Initialization**
-
-Store your practice credentials in `~/.config/oanda/credentials` (directory
-permissions `700`, file permissions `600`):
+Create a `.env` file in your project directory and add your OANDA API key:
 
 ```dotenv
-OANDA_API_TOKEN=your_api_token
-OANDA_ACCOUNT_ID=your_practice_account_id
-OANDA_ENVIRONMENT=practice
+OANDA_API_TOKEN=your_api_key
 ```
 
-Link the project dotenv file to that external file:
+Load it with `dotenv` before creating the client. `.env` is ignored by Git.
 
-```bash
-ln -s ~/.config/oanda/credentials .env
-```
-
-`.env` is ignored by Git. `dotenv::dotenv()` follows this symlink, so credentials
-stay outside the repository. Run commands from the project directory. Existing
-exported environment variables take precedence over dotenv values.
-
-Run the read-only practice smoke test:
-
-```bash
-cargo test --test practice
-```
-
-It checks authentication/account listing, an account summary, and five hourly
-EUR/USD candles without printing the token or account responses. If
-`OANDA_ACCOUNT_ID` is empty, absent, or still `your_demo_account_id`, it uses the
-first accessible practice account for the test without changing the credentials
-file. A configured account must belong to the token.
-
-The existing endpoint tests use the practice environment. For live applications,
-select `Environment::Live` explicitly; `OANDA_ENVIRONMENT` does not change the
-constructor's environment automatically.
-
-Example
-
-Here is an example of how to use the library to get historical candle data:
+### Get hourly candles
 
 ```rust
-use oanda_rs::client::OandaClient;
-use oanda_rs::instrument::candles::{CandleQuery, CandleQueryParam, Granularity};
 use dotenv::dotenv;
+use oanda_rs::{
+    client::{ClientConfig, OandaClient},
+    instrument::candles::{CandleQuery, CandleQueryParam, Granularity},
+};
 
 #[tokio::main]
-async fn main() {
-    dotenv().expect("Could not load the project .env file");
-    let api_key = std::env::var("OANDA_API_TOKEN").expect("OANDA_API_TOKEN must be set");
-    let account_id = std::env::var("OANDA_ACCOUNT_ID").expect("OANDA_ACCOUNT_ID must be set");
-
-    let client_result = OandaClient::new(Some(&account_id), &api_key, 100, 100, 100, 5);
-    let mut client = match client_result {
-        Ok(v) => v,
-        Err(e) => {
-            println!("Error: {}", e);
-            return;
-        }
-    };
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv()?;
+    let api_key = std::env::var("OANDA_API_TOKEN")?;
+    let mut client = OandaClient::new_with_config(None, &api_key, ClientConfig::default())?;
 
     let mut query = CandleQuery::new();
-    query.add_param("count", CandleQueryParam::Count(5));
+    query.add_param("count", CandleQueryParam::Count(100));
     query.add_param("granularity", CandleQueryParam::Granularity(Granularity::H1));
 
-    let response = client.get_candles("EUR_USD", query.build()).await;
-
-    match response {
-        Ok(v) => {
-            println!("Response: {:?}", v);
-        }
-        Err(e) => {
-            println!("Error: {}", e);
-        }
-    }
+    let response = client.get_candles("EUR_USD", query.build()).await?;
+    println!("{:?}", response);
+    Ok(())
 }
 ```
 
-### Configure a proxy in code
+Candle requests do not require an account ID. For account-specific endpoints,
+pass an account ID as the first constructor argument or call
+`client.set_account_id(&account_id)`. Use `client.get_accounts().await?` to list
+the accounts available to your token.
+
+## Configuration
+
+`ClientConfig::default()` uses the practice environment, 8 concurrent requests,
+100 requests per second, and up to 5 retries after the initial attempt.
 
 ```rust
-use oanda_rs::client::{ClientConfig, OandaClient};
+use oanda_rs::client::{ClientConfig, Environment, OandaClient};
 
 let mut client = OandaClient::new_with_config(
-    Some(&account_id),
+    None,
     &api_key,
     ClientConfig {
-        proxy: Some("http://127.0.0.1:10808".into()),
-        ..ClientConfig::default()
+        environment: Environment::Practice,
+        concurrency_limit: 4,
+        rate_limit: 50,
+        retry_attempts: 3,
+        proxy: None,
     },
 )?;
 ```
 
-`ClientConfig` defaults to practice, concurrency 8, 100 requests/second, and
-5 retries. Its `environment`, `concurrency_limit`, `rate_limit`, and
-`retry_attempts` fields can also be set explicitly. Existing constructors still
-work. An explicit HTTP/HTTPS proxy overrides environment proxy settings and
-applies to GET, PATCH, retries, and all clones. With `proxy: None`, reqwest
-continues to discover proxies from environment variables such as `HTTPS_PROXY`.
-Invalid proxy URLs fail during construction. SOCKS support is not enabled.
+Use `Environment::Live` with a live account token to select the production API.
+The environment is selected in code.
 
-The practice smoke test accepts `OANDA_PROXY` to exercise this configuration:
+### Proxy
 
-```bash
-OANDA_PROXY=http://127.0.0.1:10808 cargo test --test practice
-```
-
-### Environments, connections, rate limiting, and retries
-
-Requests run through [rustopus](https://github.com/nimanoori22/rustopus), pinned to
-revision `3d2b8120343e58b3ed7c92052c54700a164afa51`. The default environment remains
-fxTrade Practice. Select fxTrade explicitly for a live account:
+Set `proxy` to an HTTP/HTTPS proxy URL:
 
 ```rust
-use oanda_rs::client::{Environment, OandaClient};
-
-let client = OandaClient::new_with_environment(
-    Some(&account_id), &api_key, 100, 8, 100, 5, Environment::Live,
-)?;
+let config = ClientConfig {
+    proxy: Some("http://proxy.example.com:8080".into()),
+    ..ClientConfig::default()
+};
+let client = OandaClient::new_with_config(None, &api_key, config)?;
 ```
 
-The existing `OandaClient::new(account_id, api_key, buffer_size,
-concurrency_limit, rate_limit, retry_attempts)` call remains supported:
+An explicit proxy overrides environment proxy settings and applies to all
+requests, retries, and clones. With `proxy: None`, reqwest uses environment
+proxy settings such as `HTTPS_PROXY`. Invalid proxy URLs fail during
+construction. SOCKS support is not enabled.
 
-- `buffer_size` is retained for source compatibility and has no effect. Rustopus
-  waits in the caller's future without a background request queue.
-- `concurrency_limit` must be positive and bounds in-flight requests, including
-  response body reads.
-- `rate_limit` must be between 1 and 100 requests/second. Requests are paced
-  without an initial burst; every retry consumes a rate token.
-- `retry_attempts` counts retries **after** the initial attempt; zero disables
-  retries. Rustopus retries transient transport failures and HTTP 408, 429, 500,
-  502, 503, and 504 with exponential backoff and jitter. Numeric `Retry-After`
-  pauses the shared arm (capped at 60 seconds); HTTP-date values use backoff.
+### Rate limits and retries
 
-One persistent HTTP/1.1 client and one rustopus arm are shared by all clones.
-Bodies are fully read before slots are released, allowing connection reuse.
-Connection attempts are spaced at least 500 ms apart across all OandaClient
-instances in this process. The two small `tower-layer`/`tower-service` trait
-crates attach that connection hook to reqwest; Tower's buffer, limit, and retry
-middleware has been removed. Reqwest itself still depends on Tower internally.
-Automatic redirects and reqwest's additional retry policy are disabled so
-rustopus controls request attempts.
+Requests use [rustopus](https://github.com/nimanoori22/rustopus). All clones
+share the connection pool, request rate limit, and concurrency limit.
 
-These settings follow OANDA's [development guide](https://developer.oanda.com/rest-live-v20/development-guide/)
-and [best practices](https://developer.oanda.com/rest-live-v20/best-practices/):
-100 requests/second is the recommended persistent-connection rate, below the
-120 requests/second REST ceiling. Request limits are shared across **clones**,
-not separately constructed clients. OANDA applies limits per IP, so other
-clients and processes using that IP must also fit within the budget. The
-connection hook limits connector attempts; DNS address fallback or proxies may
-create additional underlying sockets.
+- `rate_limit` must be between 1 and 100 requests per second, with no initial burst.
+- `concurrency_limit` must be positive and includes response body reads.
+- `retry_attempts` counts retries after the initial attempt; zero disables retries.
+- Transient transport failures and HTTP 408, 429, 500, 502, 503, and 504 are retried
+  with backoff. Numeric `Retry-After` pauses the shared arm for up to 60 seconds;
+  HTTP-date values use backoff.
 
-HTTP failures are returned even when the body has no `errorMessage`. OANDA's
-error message is retained on terminal failures and exhausted retries. JSON
-request bodies use `Content-Type: application/json` and requests use bearer
-authentication. PATCH requests also use the configured retry policy; set
-`retry_attempts` to zero when replaying a write would be unsafe.
+Connection attempts are spaced at least 500 ms apart across client instances
+in the same process. Request limits are shared across clones, rather than
+separately constructed clients. OANDA applies limits per IP, so other processes
+using the same IP must also fit within that budget. DNS address fallback and
+proxies may create additional underlying sockets.
 
-Migration notes: the old public Tower-specific `policies` module and
-`client::ClientWrapper` have been removed. `reqwest` is upgraded to 0.13 to match
-rustopus, which also requires a Rust toolchain supporting edition 2024. Endpoint
-methods and the existing constructor retain their signatures.
+These defaults follow OANDA's [development guide](https://developer.oanda.com/rest-live-v20/development-guide/)
+and [best practices](https://developer.oanda.com/rest-live-v20/best-practices/).
+PATCH requests also use the retry policy; set `retry_attempts` to zero when
+replaying a write would be unsafe.
 
-This migration covers REST requests. Streaming (including its 20-stream cap)
-and automatic account snapshot synchronization are not implemented. For account
-updates, use Account Details first, retain its `lastTransactionID`, then poll
-Account Changes with the most recently returned transaction ID, as described
-in OANDA's best practices.
+### Compatibility
 
-### Testing
+The existing `OandaClient::new` and `OandaClient::new_with_environment`
+constructors remain supported. Their `buffer_size` argument has no effect with
+rustopus. The old Tower-specific `policies` module and `client::ClientWrapper`
+have been removed. The library now uses reqwest 0.13 and requires a toolchain
+supporting Rust edition 2024 for rustopus.
 
-Run the local HTTP regression suite without OANDA credentials:
+## Testing
+
+Run the local HTTP regression tests without OANDA credentials:
 
 ```bash
 cargo test --lib client::tests
-cargo test --all-targets --no-run
 ```
 
-The existing account and candle tests contact OANDA and require credentials.
-Run those explicitly against a practice account when needed. The local suite
-uses dummy tokens and checks retries, terminal errors, headers, shared pacing,
-connection reuse, and connection attempt spacing.
+With a practice API key in `.env`, check account access, an account summary,
+and candle retrieval:
+
+```bash
+OANDA_ENVIRONMENT=practice cargo test --test practice practice_credentials_and_read_only_endpoints -- --exact
+```
+
+The test uses the first accessible account unless `OANDA_ACCOUNT_ID` is set.
+The practice integration tests accept an optional `OANDA_PROXY` URL.
+
+To save the latest 100 EUR/USD hourly candles to `eur_usd_h1_100.json` in the
+project directory:
+
+```bash
+OANDA_ENVIRONMENT=practice cargo test --test practice save_latest_100_hourly_candles -- --exact
+```
+
+This replaces the previous export. The newest candle may still be forming;
+check its `complete` field. The export is ignored by Git.
+
+Other account and candle tests also contact OANDA and require credentials.
+Streaming and automatic account snapshot synchronization are not implemented.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome through pull requests.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Export the latest 100 hourly candles
-
-```bash
-OANDA_PROXY=http://127.0.0.1:10808 cargo test --test practice save_latest_100_hourly_candles -- --exact --nocapture
-```
-
-This read-only practice test saves EUR/USD candles to `eur_usd_h1_100.json` in
-the project directory, replacing the previous export. The file includes the
-instrument, granularity, and 100 candles in chronological order. The newest
-candle may still be forming; check its `complete` field. The export is ignored
-by Git.
+[MIT](LICENSE).
